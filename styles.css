@@ -61,20 +61,61 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.8);
+  background: #c8c8c8;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  overflow: hidden;
+}
+
+/* CrossDesk background text */
+.connection-overlay::before {
+  content: "CrossDesk";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(30px, 12vw, 320px);
+  font-weight: 900;
+  color: rgba(0, 0, 0, 1);
+  white-space: nowrap;
+  letter-spacing: 0.05em;
+  z-index: 0;
+  pointer-events: none;
+  font-family: "Verdana", -apple-system, BlinkMacSystemFont, "Arial Black", "Helvetica Neue", sans-serif;
+  font-stretch: condensed;
+  max-width: 98%;
+  width: fit-content;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+/* Glassmorphism layer covering CrossDesk text */
+.connection-overlay::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 1;
+  pointer-events: none;
 }
 
 .connection-panel {
-  background: var(--card-background);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
   border-radius: 24px; /* Same radius as status bar panel */
   padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  max-width: 320px;
-  width: 85%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  width: clamp(280px, 85%, 320px);
+  position: relative;
+  z-index: 2;
   /* Disable text selection and copying */
   user-select: none;
   -webkit-user-select: none;
@@ -83,13 +124,14 @@ body {
   /* Disable double-tap zoom on mobile */
   touch-action: manipulation;
   -ms-touch-action: manipulation;
+  /* Add subtle border for better visibility */
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 /* Reduce width in portrait orientation */
 @media (orientation: portrait) {
   .connection-panel {
-    width: 75%;
-    max-width: 280px;
+    width: clamp(260px, 75%, 280px);
   }
   
   /* Keep label and input on same line in portrait mode if space allows */
@@ -102,6 +144,13 @@ body {
     min-width: 100px;
     margin-bottom: 0;
     flex-shrink: 0;
+  }
+}
+
+/* Mobile landscape - reduce width for phones in landscape */
+@media (max-width: 900px) and (orientation: landscape) {
+  .connection-panel {
+    width: clamp(280px, 60%, 320px);
   }
 }
 
@@ -162,7 +211,7 @@ body {
 .connection-header h2 {
   margin: 0;
   color: #444;
-  font-weight: 500;
+  font-weight: 700;
   font-size: 1.5rem;
   /* Disable interaction */
   pointer-events: none;
@@ -421,7 +470,7 @@ video {
 }
 
 .connected-panel {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(10px);
   border: none;
   padding: 12px 16px;
@@ -1182,20 +1231,17 @@ select:focus {
   border: 1px solid rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Mobile responsive */
+/* Mobile responsive - small screens */
 @media (max-width: 768px) {
   .connection-panel {
     padding: 20px;
-    max-width: 75%;
-    width: 75%;
   }
 }
 
 /* Further reduce width in portrait on small screens */
 @media (max-width: 768px) and (orientation: portrait) {
   .connection-panel {
-    width: 70%;
-    max-width: 280px;
+    width: clamp(240px, 70%, 280px);
   }
 }
 

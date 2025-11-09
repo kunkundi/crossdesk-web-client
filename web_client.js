@@ -12,6 +12,7 @@ const elements = {
   connectedPanel: document.getElementById("connected-panel"),
   panelCollapsedBar: document.getElementById("panel-collapsed-bar"),
   connectingOverlay: document.getElementById("connecting-overlay"),
+  connectingMessageText: document.getElementById("connecting-message-text"),
   connectionStatusLed: document.getElementById("connection-status-led"),
   connectionStatusIndicator: document.getElementById("connection-status-indicator"),
   connectedStatusLed: document.getElementById("connected-status-led"),
@@ -142,6 +143,28 @@ function createPeerConnection() {
     const isConnected = state === "connected";
     updateStatusLed(elements.connectionStatusLed, isConnected, true);
     updateStatusLed(elements.connectedStatusLed, isConnected, false);
+    
+    // Show connection status overlay for disconnected or failed states
+    if (state === "disconnected" || state === "failed") {
+      if (elements.connectingOverlay && elements.connectingMessageText) {
+        // Update message text based on state
+        if (state === "disconnected") {
+          elements.connectingMessageText.textContent = "连接已断开...";
+        } else if (state === "failed") {
+          elements.connectingMessageText.textContent = "连接失败...";
+        }
+        elements.connectingOverlay.style.display = "flex";
+      }
+    } else if (state === "connected" || state === "checking" || state === "completed") {
+      // Hide overlay when connected or checking
+      if (elements.connectingOverlay) {
+        // Only hide if we're not in the initial connecting phase
+        // (initial connecting is handled by hideConnectingOverlayOnFirstFrame)
+        if (state === "connected" || state === "completed") {
+          elements.connectingOverlay.style.display = "none";
+        }
+      }
+    }
   });
   updateStatus(elements.iceState, peer.iceConnectionState);
   const isConnected = peer.iceConnectionState === "connected";
@@ -304,6 +327,10 @@ function connect() {
   // Show connecting overlay
   if (elements.connectingOverlay) {
     elements.connectingOverlay.style.display = "flex";
+  }
+  // Reset connecting message text
+  if (elements.connectingMessageText) {
+    elements.connectingMessageText.textContent = "连接中...";
   }
   sendJoinRequest();
 }
