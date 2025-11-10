@@ -7,6 +7,7 @@ const elements = {
   disconnectBtn: document.getElementById("disconnect"),
   media: document.getElementById("media"),
   video: document.getElementById("video"),
+  audio: document.getElementById("audio"),
   connectionOverlay: document.getElementById("connection-overlay"),
   connectedOverlay: document.getElementById("connected-overlay"),
   connectedPanel: document.getElementById("connected-panel"),
@@ -220,6 +221,25 @@ function createPeerConnection() {
   };
 
   peer.ontrack = ({ track, streams }) => {
+    // Handle audio tracks
+    if (track.kind === "audio" && elements.audio) {
+      if (!elements.audio.srcObject) {
+        // First audio track: create new stream
+        const audioStream = streams && streams[0] ? streams[0] : new MediaStream([track]);
+        elements.audio.srcObject = audioStream;
+        elements.audio.autoplay = true;
+        // Try to play audio (may require user interaction)
+        elements.audio.play().catch(err => {
+          console.log("Audio autoplay prevented:", err);
+        });
+      } else {
+        // Additional audio track: add to existing stream
+        elements.audio.srcObject.addTrack(track);
+      }
+      return;
+    }
+    
+    // Handle video tracks
     if (track.kind !== "video" || !elements.video) return;
     
     // Use track index as display_id (0, 1, 2, ...)
@@ -485,6 +505,11 @@ function teardownPeerConnection() {
   if (elements.video?.srcObject) {
     elements.video.srcObject.getTracks().forEach((track) => track.stop());
     elements.video.srcObject = null;
+  }
+  
+  if (elements.audio?.srcObject) {
+    elements.audio.srcObject.getTracks().forEach((track) => track.stop());
+    elements.audio.srcObject = null;
   }
 }
 
