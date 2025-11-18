@@ -349,11 +349,10 @@
       }
 
       event.preventDefault?.();
-
       this.state.lastPointerPos = { x: event.clientX, y: event.clientY };
       this.ensureVideoRect();
       if (this.state.videoRect && this.isInsideVideo(event.clientX, event.clientY)) {
-        this.updateNormalizedFromClient(event.clientX, event.clientY);
+        // this.updateNormalizedFromClient(event.clientX, event.clientY);
         this.requestPointerLock();
       }
 
