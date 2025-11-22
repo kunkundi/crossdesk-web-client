@@ -368,7 +368,7 @@ function sendJoinRequest() {
 function sendLeaveRequest() {
   websocket.send(
     JSON.stringify({
-      type: "leave_transmission",
+      type: "user_leave_transmission",
       user_id: clientId,
       transmission_id: getTransmissionId(),
     })
