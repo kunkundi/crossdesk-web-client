@@ -3,6 +3,7 @@
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![GitHub last commit](https://img.shields.io/github/last-commit/kunkundi/crossdesk-web-client)](https://github.com/kunkundi/crossdesk/commits/web-client)
 [![GitHub Pages Deploy Status](https://img.shields.io/github/deployments/kunkundi/crossdesk-web-client/github-pages)](https://github.com/kunkundi/crossdesk-web-client/deployments/github-pages)  
+[![GitHub issues](https://img.shields.io/github/issues/kunkundi/crossdesk-web-client.svg)]()
 [![GitHub stars](https://img.shields.io/github/stars/kunkundi/crossdesk-web-client.svg?style=social)]()
 [![GitHub forks](https://img.shields.io/github/forks/kunkundi/crossdesk-web-client.svg?style=social)]()
 
