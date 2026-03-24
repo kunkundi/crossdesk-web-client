@@ -541,7 +541,7 @@ function getTransmissionId() {
 }
 
 function getTransmissionPwd() {
-  return document.getElementById("transmission-pwd").value.trim();
+  return document.getElementById("transmission-pwd").value.trim().slice(0, 6);
 }
 
 function sendJoinRequest() {
