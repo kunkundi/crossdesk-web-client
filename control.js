@@ -79,6 +79,7 @@
         touchActive: false,
         touchStartPos: null,
         touchLastPos: null,
+        desktopPointerCalibrated: false,
         // Pinch zoom state
         pinchZoomActive: false,
         initialPinchDistance: 0,
@@ -351,9 +352,23 @@
       event.preventDefault?.();
       this.state.lastPointerPos = { x: event.clientX, y: event.clientY };
       this.ensureVideoRect();
-      if (this.state.videoRect && this.isInsideVideo(event.clientX, event.clientY)) {
-        // this.updateNormalizedFromClient(event.clientX, event.clientY);
+      const insideVideo = this.state.videoRect && this.isInsideVideo(event.clientX, event.clientY);
+      if (insideVideo) {
+        // Desktop click should always sync current cursor position before sending mouse down.
+        this.updateNormalizedFromClient(event.clientX, event.clientY);
+        // First desktop click: send a move first to calibrate remote cursor position.
+        if (!this.state.desktopPointerCalibrated) {
+          this.state.desktopPointerCalibrated = true;
+          this.sendMouseAction({
+            x: this.state.normalizedPos.x,
+            y: this.state.normalizedPos.y,
+            flag: MouseFlag.move,
+          });
+        }
         this.requestPointerLock();
+      } else if (!this.state.pointerLocked) {
+        // Ignore desktop mouse down outside video area when pointer is not locked.
+        return;
       }
 
       // Try to capture pointer, but handle errors gracefully
@@ -1645,4 +1660,3 @@
     control.sendMouseAction({ x, y, flag, scroll });
   window.sendMouseEvent = (event) => control.handleExternalMouseEvent(event);
 })();
-
