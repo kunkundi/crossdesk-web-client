@@ -40,11 +40,16 @@ const CONFIG = Object.assign({}, DEFAULT_CONFIG, window.CROSSDESK_CONFIG || {});
 const control = window.CrossDeskControl;
 let pc = null;
 let clientId = "000000";
+let isLoggedIn = false;
 let websocket = null;
 let heartbeatTimer = null;
 let reconnectTimer = null;
 let reconnectAttempt = 0;
 let lastPongAt = Date.now();
+let connectHintTimer = null;
+const CONNECT_BUTTON_DEFAULT_TEXT = elements.connectBtn
+  ? elements.connectBtn.textContent
+  : "连接";
 let trackIndex = 0; // Track index for display_id (0, 1, 2, ...)
 const trackMap = new Map(); // Map<index, track> - stores tracks by their display_id index
 
@@ -84,6 +89,28 @@ function sendSignaling(payload) {
   }
 }
 
+function updateConnectAvailability() {
+  const canConnect =
+    signalingConnectionState === SignalingConnectionState.connected && isLoggedIn;
+  enableConnectButton(canConnect);
+  if (elements.connectBtn && !connectHintTimer) {
+    elements.connectBtn.textContent = CONNECT_BUTTON_DEFAULT_TEXT;
+  }
+}
+
+function showConnectInitializingHint() {
+  if (!elements.connectBtn) return;
+  if (connectHintTimer) {
+    clearTimeout(connectHintTimer);
+  }
+  elements.connectBtn.textContent = "初始化中...";
+  elements.connectBtn.disabled = true;
+  connectHintTimer = setTimeout(() => {
+    connectHintTimer = null;
+    updateConnectAvailability();
+  }, 1500);
+}
+
 function setSignalingConnectionState(nextState, meta = {}) {
   signalingConnectionState = nextState;
 
@@ -96,7 +123,7 @@ function setSignalingConnectionState(nextState, meta = {}) {
   }
   updateStatus(elements.signalingState, signalingText);
 
-  enableConnectButton(nextState === SignalingConnectionState.connected);
+  updateConnectAvailability();
 
   if (elements.retrySignalingBtn) {
     const showRetry =
@@ -109,6 +136,12 @@ function setSignalingConnectionState(nextState, meta = {}) {
 
 function connectSignaling(isReconnect = false) {
   stopHeartbeat();
+  isLoggedIn = false;
+  clientId = "000000";
+  if (connectHintTimer) {
+    clearTimeout(connectHintTimer);
+    connectHintTimer = null;
+  }
 
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
@@ -234,8 +267,14 @@ function retrySignalingNow() {
 function handleSignalingMessage(message) {
   switch (message.type) {
     case "login":
-      if (typeof message.user_id === "string") {
+      if (typeof message.user_id === "string" && message.user_id.length > 0) {
         clientId = message.user_id.split("@")[0];
+        isLoggedIn = true;
+        if (connectHintTimer) {
+          clearTimeout(connectHintTimer);
+          connectHintTimer = null;
+        }
+        updateConnectAvailability();
       }
       break;
     case "user_join_transmission":
@@ -524,7 +563,12 @@ function sendLeaveRequest() {
 function connect() {
   if (!elements.connectBtn || !elements.disconnectBtn || !elements.media) return;
   if (!isSignalingOpen()) {
+    showConnectInitializingHint();
     triggerReconnect("connect_without_signaling");
+    return;
+  }
+  if (!isLoggedIn) {
+    showConnectInitializingHint();
     return;
   }
   elements.connectBtn.style.display = "none";
