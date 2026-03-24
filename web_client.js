@@ -7,6 +7,7 @@ const elements = {
   retrySignalingBtn: document.getElementById("retry-signaling"),
   disconnectBtn: document.getElementById("disconnect"),
   media: document.getElementById("media"),
+  videoContainer: document.getElementById("video-container"),
   video: document.getElementById("video"),
   audio: document.getElementById("audio"),
   connectionOverlay: document.getElementById("connection-overlay"),
@@ -33,6 +34,8 @@ const DEFAULT_CONFIG = {
   reconnectDelayMs: 2000,
   reconnectMaxDelayMs: 30000,
   reconnectMaxAttempts: 8,
+  interactionGuardEnabled: true,
+  interactionGuardScope: "video", // "video" | "global" | "none"
   clientTag: "web",
 };
 const CONFIG = Object.assign({}, DEFAULT_CONFIG, window.CROSSDESK_CONFIG || {});
@@ -1501,53 +1504,79 @@ window.connect = connect;
 window.disconnect = disconnect;
 window.setDisplayId = setDisplayId;
 
-// 禁止复制、剪切、粘贴等操作
+function isEditableTarget(target) {
+  if (!target || typeof Element === "undefined" || !(target instanceof Element)) {
+    return false;
+  }
+  return !!target.closest(
+    "input, textarea, select, [contenteditable='true'], [contenteditable='']"
+  );
+}
+
+function shouldGuardInteraction(event) {
+  if (!CONFIG.interactionGuardEnabled) return false;
+  const scope = String(CONFIG.interactionGuardScope || "video").toLowerCase();
+  if (scope === "none") return false;
+
+  const target = event?.target;
+  if (!target || typeof Element === "undefined" || !(target instanceof Element)) {
+    return false;
+  }
+
+  // Always keep editable fields usable for accessibility/password manager flows.
+  if (isEditableTarget(target)) return false;
+
+  if (scope === "global") return true;
+  if (scope !== "video") return false;
+
+  // Default: only guard interactions inside the remote video interaction area.
+  if (elements.videoContainer && elements.videoContainer.contains(target)) {
+    return true;
+  }
+  if (elements.video && elements.video.contains(target)) {
+    return true;
+  }
+  return false;
+}
+
 document.addEventListener("copy", (event) => {
+  if (!shouldGuardInteraction(event)) return;
   event.preventDefault();
-  event.clipboardData.setData("text/plain", "");
+  if (event.clipboardData) {
+    event.clipboardData.setData("text/plain", "");
+  }
   return false;
 });
 
 document.addEventListener("cut", (event) => {
+  if (!shouldGuardInteraction(event)) return;
   event.preventDefault();
-  event.clipboardData.setData("text/plain", "");
+  if (event.clipboardData) {
+    event.clipboardData.setData("text/plain", "");
+  }
   return false;
 });
 
 document.addEventListener("paste", (event) => {
-  // 允许在输入框中粘贴
-  const target = event.target;
-  if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
-    return; // 允许输入框粘贴
-  }
+  if (!shouldGuardInteraction(event)) return;
   event.preventDefault();
   return false;
 });
 
-// 阻止右键菜单（可选，但保留以增强保护）
 document.addEventListener("contextmenu", (event) => {
-  // 允许在输入框上显示右键菜单
-  const target = event.target;
-  if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
-    return; // 允许输入框右键菜单
-  }
+  if (!shouldGuardInteraction(event)) return;
   event.preventDefault();
   return false;
 });
 
-// 阻止选择文本（通过鼠标拖拽）
 document.addEventListener("selectstart", (event) => {
-  const target = event.target;
-  // 允许输入框和文本区域选择
-  if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT")) {
-    return;
-  }
+  if (!shouldGuardInteraction(event)) return;
   event.preventDefault();
   return false;
 });
 
-// 阻止拖拽
 document.addEventListener("dragstart", (event) => {
+  if (!shouldGuardInteraction(event)) return;
   event.preventDefault();
   return false;
 });

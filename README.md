@@ -31,6 +31,10 @@ const DEFAULT_CONFIG = {
   heartbeatIntervalMs: 3000,
   heartbeatTimeoutMs: 10000,
   reconnectDelayMs: 2000,
+  reconnectMaxDelayMs: 30000,
+  reconnectMaxAttempts: 8,
+  interactionGuardEnabled: true,
+  interactionGuardScope: "video", // "video" | "global" | "none"
   clientTag: "web",
 };
 ```
