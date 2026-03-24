@@ -76,15 +76,40 @@ function isSignalingOpen() {
   return !!websocket && websocket.readyState === WebSocket.OPEN;
 }
 
-function sendSignaling(payload) {
-  if (!isSignalingOpen()) return false;
+function sendSignaling(payload, options = {}) {
+  const {
+    label = "signaling",
+    onFailure = null,
+    suppressWarning = false,
+  } = options;
+
+  if (!isSignalingOpen()) {
+    if (!suppressWarning) {
+      console.warn(`[CrossDesk] Skip signaling send (${label}): socket not open`);
+    }
+    if (typeof onFailure === "function") {
+      try {
+        onFailure("not_open");
+      } catch (callbackErr) {
+        console.error("sendSignaling onFailure callback failed", callbackErr);
+      }
+    }
+    return false;
+  }
   try {
     websocket.send(
       typeof payload === "string" ? payload : JSON.stringify(payload)
     );
     return true;
   } catch (err) {
-    console.error("Failed to send signaling message", err);
+    console.error(`[CrossDesk] Failed signaling send (${label})`, err);
+    if (typeof onFailure === "function") {
+      try {
+        onFailure("send_error", err);
+      } catch (callbackErr) {
+        console.error("sendSignaling onFailure callback failed", callbackErr);
+      }
+    }
     return false;
   }
 }
@@ -366,7 +391,16 @@ function startHeartbeat() {
   stopHeartbeat();
   lastPongAt = Date.now();
   heartbeatTimer = setInterval(() => {
-    sendSignaling({ type: "ping", ts: Date.now() });
+    sendSignaling(
+      { type: "ping", ts: Date.now() },
+      {
+        label: "ping",
+        suppressWarning: true,
+        onFailure: () => {
+          triggerReconnect("ping_send_failed");
+        },
+      }
+    );
     if (Date.now() - lastPongAt > CONFIG.heartbeatTimeoutMs) {
       triggerReconnect("heartbeat_timeout");
     }
@@ -380,7 +414,15 @@ function stopHeartbeat() {
 }
 
 function sendLogin() {
-  sendSignaling({ type: "login", user_id: CONFIG.clientTag });
+  sendSignaling(
+    { type: "login", user_id: CONFIG.clientTag },
+    {
+      label: "login",
+      onFailure: () => {
+        triggerReconnect("login_send_failed");
+      },
+    }
+  );
 }
 
 connectSignaling(false);
@@ -435,14 +477,22 @@ function createPeerConnection() {
 
   peer.onicecandidate = ({ candidate }) => {
     if (!candidate) return;
-    sendSignaling({
-      type: "new_candidate_mid",
-      transmission_id: getTransmissionId(),
-      user_id: clientId,
-      remote_user_id: getTransmissionId(),
-      candidate: candidate.candidate,
-      mid: candidate.sdpMid,
-    });
+    sendSignaling(
+      {
+        type: "new_candidate_mid",
+        transmission_id: getTransmissionId(),
+        user_id: clientId,
+        remote_user_id: getTransmissionId(),
+        candidate: candidate.candidate,
+        mid: candidate.sdpMid,
+      },
+      {
+        label: "new_candidate_mid",
+        onFailure: () => {
+          triggerReconnect("candidate_send_failed");
+        },
+      }
+    );
   };
 
   peer.ontrack = ({ track, streams }) => {
@@ -548,13 +598,24 @@ function bindDataChannel(channel) {
 async function sendAnswer(peer) {
   await peer.setLocalDescription(await peer.createAnswer());
   await waitIceGathering(peer);
-  sendSignaling({
-    type: "answer",
-    transmission_id: getTransmissionId(),
-    user_id: clientId,
-    remote_user_id: getTransmissionId(),
-    sdp: peer.localDescription.sdp,
-  });
+  const sent = sendSignaling(
+    {
+      type: "answer",
+      transmission_id: getTransmissionId(),
+      user_id: clientId,
+      remote_user_id: getTransmissionId(),
+      sdp: peer.localDescription.sdp,
+    },
+    {
+      label: "answer",
+      onFailure: () => {
+        triggerReconnect("answer_send_failed");
+      },
+    }
+  );
+  if (!sent) {
+    throw new Error("Failed to send answer");
+  }
 }
 
 function waitIceGathering(peer) {
@@ -577,19 +638,28 @@ function getTransmissionPwd() {
 }
 
 function sendJoinRequest() {
-  return sendSignaling({
-    type: "join_transmission",
-    user_id: clientId,
-    transmission_id: `${getTransmissionId()}@${getTransmissionPwd()}`,
-  });
+  return sendSignaling(
+    {
+      type: "join_transmission",
+      user_id: clientId,
+      transmission_id: `${getTransmissionId()}@${getTransmissionPwd()}`,
+    },
+    { label: "join_transmission" }
+  );
 }
 
 function sendLeaveRequest() {
-  return sendSignaling({
-    type: "user_leave_transmission",
-    user_id: clientId,
-    transmission_id: getTransmissionId(),
-  });
+  return sendSignaling(
+    {
+      type: "user_leave_transmission",
+      user_id: clientId,
+      transmission_id: getTransmissionId(),
+    },
+    {
+      label: "user_leave_transmission",
+      suppressWarning: true,
+    }
+  );
 }
 
 function connect() {
@@ -666,7 +736,9 @@ function disconnect() {
     elements.connectedPanel.style.right = "auto";
   }
 
-  sendLeaveRequest();
+  if (!sendLeaveRequest()) {
+    console.warn("[CrossDesk] Skip leave_transmission: signaling unavailable during disconnect");
+  }
   teardownPeerConnection();
   enableDataChannelUi(false);
   // Reset track index and clear display select options
