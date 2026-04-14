@@ -821,18 +821,36 @@
     }
 
     bindKeyboardListeners() {
-      document.addEventListener("keydown", (event) => {
-        if (!this.isChannelOpen()) return;
-        if (event.repeat) return;
-        if (isTextInput(event.target)) return;
-        this.sendKeyboardAction(event.keyCode ?? 0, true);
-      });
+      document.addEventListener(
+        "keydown",
+        (event) => {
+          if (!this.isChannelOpen()) return;
+          if (isTextInput(event.target)) return;
 
-      document.addEventListener("keyup", (event) => {
-        if (!this.isChannelOpen()) return;
-        if (isTextInput(event.target)) return;
-        this.sendKeyboardAction(event.keyCode ?? 0, false);
-      });
+          if (event.cancelable) {
+            event.preventDefault();
+          }
+
+          if (event.repeat) return;
+          this.sendKeyboardAction(event.keyCode ?? 0, true);
+        },
+        { capture: true },
+      );
+
+      document.addEventListener(
+        "keyup",
+        (event) => {
+          if (!this.isChannelOpen()) return;
+          if (isTextInput(event.target)) return;
+
+          if (event.cancelable) {
+            event.preventDefault();
+          }
+
+          this.sendKeyboardAction(event.keyCode ?? 0, false);
+        },
+        { capture: true },
+      );
     }
 
     setupVirtualMouse() {
