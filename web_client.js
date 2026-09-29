@@ -64,6 +64,20 @@ let websocket = null;
 let heartbeatTimer = null;
 let reconnectTimer = null;
 let reconnectAttempt = 0;
+let loginIdentity = null;
+let sessionTicket = null;
+
+function reportSession() {
+  if (!sessionTicket || !isLoggedIn) return;
+  // Let ICE finish or recover from a brief interruption before deciding.
+  // Explicit disconnect and terminal failures set the session inactive first.
+  if (isConnectionSessionActive && pc &&
+      !["connected", "completed", "failed", "closed"].includes(pc.iceConnectionState)) return;
+  const alive = isConnectionSessionActive && pc &&
+    (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed");
+  sendSignaling({...sessionTicket, type: "session_report", alive: Boolean(alive)},
+    {label: "session_report", suppressWarning: true});
+}
 let lastPongAt = Date.now();
 let connectHintTimer = null;
 let connectionTimeoutTimer = null;
@@ -538,6 +552,15 @@ function handleSignalingMessage(message) {
   applyDynamicTurnCredentials(message);
 
   switch (message.type) {
+    case "session_ticket":
+      if (["transmission_id", "host_id", "guest_id", "token"].every(key =>
+          typeof message[key] === "string") && message.token.length === 64 &&
+          message.guest_id === clientId) {
+        sessionTicket = message;
+      }
+      break;
+    case "session_resumed":
+      break;
     case "login":
       if (typeof message.user_id === "string" && message.user_id.trim().length > 0) {
         const nextClientId = message.user_id.trim().split("@")[0];
@@ -546,7 +569,9 @@ function handleSignalingMessage(message) {
           break;
         }
         clientId = nextClientId;
+        if (message.user_id.includes("@")) loginIdentity = message.user_id.trim();
         isLoggedIn = true;
+        reportSession();
         if (connectHintTimer) {
           clearTimeout(connectHintTimer);
           connectHintTimer = null;
@@ -648,7 +673,7 @@ function stopHeartbeat() {
 
 function sendLogin() {
   sendSignaling(
-    { type: "login", user_id: CONFIG.clientTag },
+    { type: "login", user_id: loginIdentity || CONFIG.clientTag, session_resume_version: 1 },
     {
       label: "login",
       onFailure: () => {
@@ -707,6 +732,7 @@ function createPeerConnection() {
       if (state === "connected" || state === "completed") {
         clearConnectionTimeout();
         clearIceDisconnectedTimeout();
+        reportSession();
       }
       // Hide overlay when connected or checking
       if (elements.connectingOverlay) {
@@ -968,6 +994,8 @@ function disconnect() {
   if (!elements.connectBtn || !elements.disconnectBtn || !elements.media) return;
   control?.setDataChannel(null);
   isConnectionSessionActive = false;
+  reportSession();
+  sessionTicket = null;
   clearConnectionTimeout();
   clearIceDisconnectedTimeout();
   setConnectionFeedback();
