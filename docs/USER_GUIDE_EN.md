@@ -73,7 +73,7 @@ Open the page over **HTTPS or localhost** with a browser that supports Service W
 
 ### Clipboard
 
-Open **剪贴板** (Clipboard) in the remote-control menu. Update both the web client and the desktop build with web clipboard support. Older hosts show an upgrade hint.
+Open **剪贴板** (Clipboard) in the remote-control menu. Synchronization requires host support. Older hosts remain usable for remote control and keyboard shortcuts; only clipboard synchronization is unavailable. The web client does not send clipboard protocol messages over a legacy control channel.
 
 - Local to remote: use Ctrl+V, Command+V, or Shift+Insert over the remote video. Text is sent first; the original paste shortcut is forwarded only after the host confirms its OS clipboard was updated. Use a shortcut appropriate for the host OS.
 - Manual send: expand **手动传递文本**, click **发送到远端**, then paste in the remote application. Alternatively, paste/type into **发送文本** and click **发送**.

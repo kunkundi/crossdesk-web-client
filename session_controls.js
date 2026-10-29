@@ -182,10 +182,11 @@
       const state = byId("clipboard-state");
       state.hidden = !!ready;
       state.textContent = ready ? "" : clipboard?.state === "unsupported"
-        ? "请更新被控端后重连" : clipboard?.closed ? "连接已断开" : "正在连接…";
+        ? "被控端不支持剪贴板同步，仍可正常远控" : clipboard?.closed ? "连接已断开" : "正在连接…";
       byId("clipboard-automatic").disabled = !ready;
-      byId("clipboard-automatic").setAttribute("aria-checked", String(!!clipboard?.automatic));
-      byId("clipboard-permissions").textContent = clipboard?.automatic
+      byId("clipboard-automatic").setAttribute("aria-checked", String(!!ready && !!clipboard?.automatic));
+      byId("clipboard-permissions").hidden = !ready;
+      byId("clipboard-permissions").textContent = !ready ? "" : clipboard?.automatic
         ? (!clipboard.readGranted || !clipboard.writeGranted)
           ? "权限受限，可手动发送或复制" : "在此页面自动同步复制的文本"
         : "开启后，在此页面同步复制的文本";
