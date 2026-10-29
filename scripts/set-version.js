@@ -17,7 +17,7 @@ const declaration = /^const WEB_CLIENT_VERSION = "[^"]+";$/m;
 if (!declaration.test(client)) throw new Error("Missing WEB_CLIENT_VERSION declaration");
 
 let html = fs.readFileSync(indexPath, "utf8");
-for (const asset of ["styles.css", "control.js", "turn_credentials.js", "file_download.js", "file_transfer.js", "web_client.js", "session_controls.js"]) {
+for (const asset of ["styles.css", "control.js", "turn_credentials.js", "file_download.js", "file_transfer.js", "clipboard.js", "web_client.js", "session_controls.js"]) {
   const attribute = asset.endsWith(".css") ? "href" : "src";
   const pattern = new RegExp(`${attribute}="${asset.replace(/\./g, "\\.")}(?:\\?[^\"]*)?"`, "g");
   const matches = html.match(pattern);

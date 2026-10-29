@@ -56,6 +56,7 @@ turn_credentials.js
 file_download.js
 file_download_sw.js
 file_transfer.js
+clipboard.js
 session_controls.js
 vendor/adapter-9.0.1.min.js
 icons/
@@ -75,7 +76,7 @@ manifest.json
 
 先按 [CrossDesk Server 部署说明](https://github.com/kunkundi/crossdesk-server#运行服务) 启动信令服务和 Coturn，并设置被控桌面端使用该服务。
 
-默认地址在 [web_client.js](../web_client.js) 的 `DEFAULT_CONFIG` 中。需要覆盖时，将以下代码插入 [index.html](../index.html) 底部、**现有 `control.js` 脚本标签之前**。保留所有现有脚本及 `?v=` 参数；应用脚本的加载顺序应为 `control.js` → `turn_credentials.js` → `file_download.js` → `file_transfer.js` → `web_client.js` → `session_controls.js`。
+默认地址在 [web_client.js](../web_client.js) 的 `DEFAULT_CONFIG` 中。需要覆盖时，将以下代码插入 [index.html](../index.html) 底部、**现有 `control.js` 脚本标签之前**。保留所有现有脚本及 `?v=` 参数；应用脚本的加载顺序应为 `control.js` → `turn_credentials.js` → `file_download.js` → `file_transfer.js` → `clipboard.js` → `web_client.js` → `session_controls.js`。
 
 ```html
 <script>
@@ -130,7 +131,7 @@ manifest.json
 | `interactionGuardScope` | `"video"` | 拦截区域：`video` / `global` / `none`；输入框保留编辑能力 |
 | `clientTag` | `"web"` | 浏览器登录标识，不是要连接的远程设备 ID |
 
-所有 `Ms` 参数单位均为毫秒。交互拦截用于避免视频区域内的选择、拖动、复制等浏览器默认行为，不实现剪贴板同步。
+所有 `Ms` 参数单位均为毫秒。交互拦截用于避免视频区域内的选择、拖动、复制等浏览器默认行为。剪贴板同步通过独立可靠通道实现；浏览器权限与使用方式见[用户指南](USER_GUIDE.md#剪贴板)。
 
 </details>
 

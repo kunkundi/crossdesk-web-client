@@ -71,6 +71,17 @@ Open the page over **HTTPS or localhost** with a browser that supports Service W
 
 **Disconnecting, reconnecting, or refreshing stops active transfers and downloads; completed downloads remain.** Completion in the page means the bytes have been handed to the browser. Check the browser download list for the final save result.
 
+### Clipboard
+
+Open **剪贴板** (Clipboard) in the remote-control menu. Update both the web client and the desktop build with web clipboard support. Older hosts show an upgrade hint.
+
+- Local to remote: use Ctrl+V, Command+V, or Shift+Insert over the remote video. Text is sent first; the original paste shortcut is forwarded only after the host confirms its OS clipboard was updated. Use a shortcut appropriate for the host OS.
+- Manual send: expand **手动传递文本**, click **发送到远端**, then paste in the remote application. Alternatively, paste/type into **发送文本** and click **发送**.
+- Remote to local: copy text on the host, expand **手动传递文本**, then click **复制到本机**, or select the received text and copy it manually. The relevant text area opens automatically when clipboard access is unavailable or denied.
+- The **自动同步** switch is on by default for each new connection and can be turned off for the current connection. With persistent browser clipboard grants, it runs while the page is focused and visible. Safari, Firefox, denied permissions, or insecure pages can use the buttons/text areas under **手动传递文本**. System clipboard API access requires HTTPS or localhost.
+
+Each value is limited to 128 KiB of UTF-8 plain text, including Unicode and newlines. Images, files, rich text, empty values, and embedded NUL are not transferred. No clipboard content is persisted; disconnect/reconnect clears the cache and text areas. Leaving the page, clicking elsewhere, or pressing another key cancels a pending paste. The Windows SYSTEM unattended host continues to block clipboard access.
+
 <a id="troubleshooting"></a>
 
 ## Troubleshooting

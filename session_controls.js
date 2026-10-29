@@ -9,7 +9,7 @@
   if (!orb || !panel || !shield || !control || !session) return;
   const clamp = (n, min, max) => Math.max(min, Math.min(n, Math.max(min, max)));
   const pageTitles = { main: "远程控制", video: "画面设置", network: "网络状态",
-    display: "显示器", files: "文件传输", disconnect: "断开连接" };
+    display: "显示器", files: "文件传输", clipboard: "剪贴板", disconnect: "断开连接" };
   const preferenceDetails = [
     "优先保持画面流畅，带宽或编码压力较大时会更积极地降低分辨率。",
     "优先保持较高分辨率，带宽不足时先降低帧率，保持画面清晰。",
@@ -32,6 +32,7 @@
       this.renderSettings(null);
       this.setConnected(false);
       this.renderFiles(window.CrossDeskFiles);
+      this.renderClipboard(window.CrossDeskClipboard);
     }
 
     // Fixed overlays use the visual viewport so browser chrome, zoom and safe
@@ -141,18 +142,19 @@
       orb.setAttribute("aria-expanded", "true");
       byId("session-menu-title").textContent = pageTitles[page];
       byId("session-menu-back").hidden = page === "main";
-      byId("disconnect-connected").hidden = page === "disconnect";
+      byId("disconnect-connected").hidden = page === "disconnect" || page === "clipboard";
       panel.querySelectorAll("[data-session-page]").forEach(el => el.hidden = el.dataset.sessionPage !== page);
       if (page === "disconnect") control.hideVirtualKeyboard();
-      if (page === "files") {
-        // Native pickers and downloads need the browser's regular pointer.
+      if (page === "files" || page === "clipboard") {
+        // Native pickers and editable text need the browser's regular pointer.
         if (document.pointerLockElement) document.exitPointerLock?.();
-        orb.classList.remove("has-file-updates");
+        if (page === "files") orb.classList.remove("has-file-updates");
       }
       this.updateMouse();
       this.renderSettings(window.CrossDeskVideoSettings);
       this.renderNetwork(window.CrossDeskStats);
       this.renderFiles(window.CrossDeskFiles);
+      this.renderClipboard(window.CrossDeskClipboard);
       (page === "disconnect" ? byId("session-disconnect-cancel") : byId("session-menu-close")).focus({ preventScroll: true });
     }
 
@@ -173,6 +175,39 @@
       byId("session-mouse").setAttribute("aria-pressed", String(this.mouseVisible));
       byId("session-mouse-mode-label").textContent = control.state.mobileControlMode === "relative" ? "相对鼠标" : "绝对鼠标";
       this.layout();
+    }
+
+    renderClipboard(clipboard) {
+      const ready = clipboard?.ready;
+      const state = byId("clipboard-state");
+      state.hidden = !!ready;
+      state.textContent = ready ? "" : clipboard?.state === "unsupported"
+        ? "请更新被控端后重连" : clipboard?.closed ? "连接已断开" : "正在连接…";
+      byId("clipboard-automatic").disabled = !ready;
+      byId("clipboard-automatic").setAttribute("aria-checked", String(!!clipboard?.automatic));
+      byId("clipboard-permissions").textContent = clipboard?.automatic
+        ? (!clipboard.readGranted || !clipboard.writeGranted)
+          ? "权限受限，可手动发送或复制" : "在此页面自动同步复制的文本"
+        : "开启后，在此页面同步复制的文本";
+      byId("clipboard-send-local").disabled = !ready || !!clipboard.pending;
+      byId("clipboard-send-text").disabled = !ready || !!clipboard.pending;
+      byId("clipboard-copy-remote").disabled = !ready || !clipboard.remoteText;
+      const remote = byId("clipboard-remote"), text = clipboard?.remoteText || "";
+      if (remote.value !== text) remote.value = text;
+      if (clipboard?.closed || this.clipboardSession !== clipboard) {
+        byId("clipboard-local").value = "";
+        byId("clipboard-manual").open = false;
+      }
+      this.clipboardSession = clipboard;
+      byId("clipboard-feedback").textContent = clipboard?.status || "";
+      if (this.page === "clipboard") this.layout();
+    }
+
+    showClipboardManual(field) {
+      byId("clipboard-manual").open = true;
+      this.layout();
+      if (this.page === "clipboard" && !panel.hidden)
+        byId(field === "receive" ? "clipboard-remote" : "clipboard-local").focus();
     }
 
     renderSettings(state) {
@@ -350,6 +385,18 @@
       shield.addEventListener("click", () => this.close());
       byId("session-menu-close").addEventListener("click", () => this.close());
       byId("session-menu-back").addEventListener("click", () => this.showPage("main"));
+      byId("clipboard-manual").addEventListener("toggle", () => this.layout());
+      byId("clipboard-automatic").addEventListener("click", () => void window.CrossDeskClipboard?.toggleAutomatic());
+      byId("clipboard-send-local").addEventListener("click", () => void window.CrossDeskClipboard?.sendLocal());
+      byId("clipboard-copy-remote").addEventListener("click", () => void window.CrossDeskClipboard?.writeRemote());
+      byId("clipboard-send-text").addEventListener("click", async () => {
+        const clipboard = window.CrossDeskClipboard;
+        if (!clipboard?.ready) return;
+        try {
+          await clipboard.sendText(byId("clipboard-local").value);
+          clipboard.feedback("已发送到远端", { transient: true });
+        } catch (error) { clipboard.feedback(error.message); }
+      });
       byId("file-transfer-select").addEventListener("click", () => {
         if (!window.CrossDeskFiles?.ready) return;
         control.cancelLocalInput();
@@ -392,7 +439,8 @@
           event.preventDefault();
           this.page === "main" ? this.close() : this.showPage("main");
         } else if (event.key === "Tab") {
-          const buttons = [...panel.querySelectorAll("button:not(:disabled), select:not(:disabled), a[href]")].filter(el => el.getClientRects().length);
+          const buttons = [...panel.querySelectorAll("button:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, a[href]")]
+            .filter(el => el.getClientRects().length && (el.tagName === "SUMMARY" || !el.closest("details:not([open])")));
           const i = buttons.indexOf(document.activeElement), next = (i + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length;
           event.preventDefault(); buttons[next]?.focus();
         }

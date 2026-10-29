@@ -56,6 +56,7 @@ turn_credentials.js
 file_download.js
 file_download_sw.js
 file_transfer.js
+clipboard.js
 session_controls.js
 vendor/adapter-9.0.1.min.js
 icons/
@@ -75,7 +76,7 @@ The website serves static files. CrossDesk Server and Coturn provide WSS signali
 
 Deploy signaling and Coturn with the [CrossDesk Server instructions](https://github.com/kunkundi/crossdesk-server/blob/HEAD/README_EN.md#run-services), then configure the remote desktop client to use that service.
 
-Default endpoints are in `DEFAULT_CONFIG` in [web_client.js](../web_client.js). To override them, insert the following block near the bottom of [index.html](../index.html), **before the existing `control.js` script tag**. Keep all existing script tags and their `?v=` parameters. The application scripts must retain this order: `control.js` → `turn_credentials.js` → `file_download.js` → `file_transfer.js` → `web_client.js` → `session_controls.js`.
+Default endpoints are in `DEFAULT_CONFIG` in [web_client.js](../web_client.js). To override them, insert the following block near the bottom of [index.html](../index.html), **before the existing `control.js` script tag**. Keep all existing script tags and their `?v=` parameters. The application scripts must retain this order: `control.js` → `turn_credentials.js` → `file_download.js` → `file_transfer.js` → `clipboard.js` → `web_client.js` → `session_controls.js`.
 
 ```html
 <script>
@@ -130,7 +131,7 @@ Normally, configure only STUN in `iceServers`. The signaling service sends tempo
 | `interactionGuardScope` | `"video"` | Scope: `video` / `global` / `none`; input fields remain editable |
 | `clientTag` | `"web"` | Browser login identifier, not the remote device ID |
 
-All `Ms` values are in milliseconds. Interaction guards prevent browser actions such as selection, dragging, and copying in the video area; they do not implement clipboard synchronization.
+All `Ms` values are in milliseconds. Interaction guards prevent browser actions such as selection, dragging, and copying in the video area. Clipboard synchronization uses a separate reliable channel; see the [user guide](USER_GUIDE_EN.md#clipboard) for browser permissions and usage.
 
 </details>
 

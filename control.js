@@ -1057,6 +1057,7 @@
         (event) => {
           if (!this.isChannelOpen()) return;
           if (this.isLocalKeyboardTarget(event.target)) return;
+          if (window.CrossDeskClipboard?.handleKeyDown(event)) return;
 
           if (event.cancelable) {
             event.preventDefault();
@@ -1283,6 +1284,7 @@
     }
 
     cancelLocalInput() {
+      window.CrossDeskClipboard?.cancelPaste();
       this.onVirtualButtonEnd({});
       this.releaseMouseButtons();
       this.releaseKeyboardKeys();

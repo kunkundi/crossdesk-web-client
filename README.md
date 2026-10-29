@@ -20,10 +20,11 @@
 | 桌面操作 | 鼠标移动、按键、滚轮与物理键盘输入 |
 | 移动端操作 | 相对 / 绝对鼠标模式、虚拟鼠标、虚拟键盘、画面缩放和平移 |
 | 文件传输 | 双向传输、多文件发送队列、进度与取消；需桌面端及 MiniRTC 支持 Web 文件通道 |
+| 剪贴板 | 双向纯文本同步、手动发送与复制，支持中文；需桌面端支持 Web 剪贴板同步 |
 | 连接恢复 | 信令心跳与自动重连，远程连接超时提示及手动重试 |
 | 自托管 | 静态网页部署，自定义 WSS 地址，服务端会话 ICE 配置与临时 TURN 凭据 |
 
-项目使用原生 HTML、CSS 和 JavaScript，**无需 npm 安装或打包构建**。当前页面为中文；剪贴板同步和把浏览器作为被控端的功能尚未实现。
+项目使用原生 HTML、CSS 和 JavaScript，**无需 npm 安装或打包构建**。当前页面为中文；不支持把浏览器作为被控端。
 
 <a id="quick-start"></a>
 
@@ -73,7 +74,7 @@ python3 -m http.server 8080 --bind 127.0.0.1
 
 ## 部署网页
 
-使用 HTTPS 静态托管，运行站点无需 Node.js。按原路径上传 `index.html`、`styles.css`、**六个应用脚本**（`control.js`、`turn_credentials.js`、`file_download.js`、`file_transfer.js`、`web_client.js`、`session_controls.js`）、下载流处理脚本 `file_download_sw.js`、`vendor/`、`icons/`、`favicon.ico` 和 `manifest.json`。
+使用 HTTPS 静态托管，运行站点无需 Node.js。按原路径上传 `index.html`、`styles.css`、**七个应用脚本**（`control.js`、`turn_credentials.js`、`file_download.js`、`file_transfer.js`、`clipboard.js`、`web_client.js`、`session_controls.js`）、下载流处理脚本 `file_download_sw.js`、`vendor/`、`icons/`、`favicon.ico` 和 `manifest.json`。
 
 GitHub Pages 选择发布分支及 `/(root)`。使用 GitHub 默认域名时删除官方 `CNAME`，自定义域名则在 Pages 中配置；自定义域名或子路径还需检查站点元数据及 manifest 的启动地址。
 

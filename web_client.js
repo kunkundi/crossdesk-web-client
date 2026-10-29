@@ -1,5 +1,5 @@
 // Update this and the asset cache keys with: node scripts/set-version.js <version>
-const WEB_CLIENT_VERSION = "2026.10.23.3";
+const WEB_CLIENT_VERSION = "2026.10.29.1";
 
 const elements = {
   clientVersion: document.getElementById("client-version"),
@@ -1238,6 +1238,8 @@ function createPeerConnection() {
   peer.crossdeskVideoSettings = new BrowserVideoSettings(peer);
   peer.crossdeskFiles = window.CrossDeskFileTransferSession
     ? new window.CrossDeskFileTransferSession(peer) : null;
+  peer.crossdeskClipboard = window.CrossDeskClipboardSession
+    ? new window.CrossDeskClipboardSession(peer) : null;
   const qos = new BrowserQosSession(peer);
   peer.crossdeskQos = qos;
 
@@ -1398,6 +1400,7 @@ function createPeerConnection() {
     if (peer !== pc) return;
     const channel = event.channel;
     if (peer.crossdeskFiles?.attach(channel)) return;
+    if (peer.crossdeskClipboard?.attach(channel)) return;
     if (channel.label === "crossdesk-qos-v1") {
       qos.attach(channel);
       return;
@@ -1434,6 +1437,7 @@ function bindDataChannel(channel, peer) {
     peer.crossdeskQos.start();
     // File support is determined by the registered channels, independently of QoS.
     peer.crossdeskFiles?.probe();
+    peer.crossdeskClipboard?.probe();
     // Only probe hosts that advertise support in the channel's DCEP metadata.
     // Legacy hosts parse control messages as numeric action types and would
     // log an error for an unsolicited web_qos_hello.
@@ -1664,6 +1668,7 @@ function teardownPeerConnection() {
   pc.crossdeskQos?.close();
   pc.crossdeskVideoSettings?.close();
   pc.crossdeskFiles?.close();
+  pc.crossdeskClipboard?.close();
   control.setDataChannel(null);
 
   try {
@@ -1859,22 +1864,17 @@ function shouldGuardInteraction(event) {
 document.addEventListener("copy", (event) => {
   if (!shouldGuardInteraction(event)) return;
   event.preventDefault();
-  if (event.clipboardData) {
-    event.clipboardData.setData("text/plain", "");
-  }
   return false;
 });
 
 document.addEventListener("cut", (event) => {
   if (!shouldGuardInteraction(event)) return;
   event.preventDefault();
-  if (event.clipboardData) {
-    event.clipboardData.setData("text/plain", "");
-  }
   return false;
 });
 
 document.addEventListener("paste", (event) => {
+  if (pc?.crossdeskClipboard?.handlePaste(event)) return;
   if (!shouldGuardInteraction(event)) return;
   event.preventDefault();
   return false;

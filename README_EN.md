@@ -20,10 +20,11 @@ Connect to a [CrossDesk](https://github.com/kunkundi/crossdesk) desktop client f
 | Desktop input | Mouse movement, buttons, scrolling, and physical keyboard input |
 | Mobile input | Absolute / relative mouse modes, virtual mouse, virtual keyboard, zoom, and pan |
 | File transfer | Bidirectional transfers, a send queue, progress, and cancellation; requires desktop/MiniRTC support for web file channels |
+| Clipboard | Bidirectional plain text, manual send/copy, and Unicode; requires desktop support for web clipboard synchronization |
 | Connection recovery | Signaling heartbeats and automatic reconnection, remote-session timeouts, and manual retry |
 | Self-hosting | Static hosting, custom WSS endpoints, server-issued session ICE configuration, and temporary TURN credentials |
 
-The project uses plain HTML, CSS, and JavaScript: **no npm installation or build step is required**. The current interface is in Chinese. Clipboard synchronization and using the browser as a remote host are not implemented.
+The project uses plain HTML, CSS, and JavaScript: **no npm installation or build step is required**. The current interface is in Chinese. Using the browser as a remote host is not supported.
 
 <a id="quick-start"></a>
 
@@ -73,7 +74,7 @@ Open [the local page](http://127.0.0.1:8080/). This serves a local preview using
 
 ## Deploy the website
 
-Use HTTPS static hosting; no Node.js runtime is required to serve the site. Upload `index.html`, `styles.css`, **all six application scripts** (`control.js`, `turn_credentials.js`, `file_download.js`, `file_transfer.js`, `web_client.js`, `session_controls.js`), the streaming download worker `file_download_sw.js`, `vendor/`, `icons/`, `favicon.ico`, and `manifest.json`, preserving their paths.
+Use HTTPS static hosting; no Node.js runtime is required to serve the site. Upload `index.html`, `styles.css`, **all seven application scripts** (`control.js`, `turn_credentials.js`, `file_download.js`, `file_transfer.js`, `clipboard.js`, `web_client.js`, `session_controls.js`), the streaming download worker `file_download_sw.js`, `vendor/`, `icons/`, `favicon.ico`, and `manifest.json`, preserving their paths.
 
 For GitHub Pages, select the publishing branch and `/(root)`. Remove the official `CNAME` when using GitHub's default domain, or configure your own domain in Pages. Custom domains and subpaths also require checking site metadata and the manifest's start URL.
 

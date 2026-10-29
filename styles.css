@@ -647,6 +647,24 @@ video {
 .session-confirm-actions button { flex: 1; }
 
 #file-transfer-select { width: 100%; }
+.clipboard-sync { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 14px; }
+.clipboard-sync-label { font-size: 13px; font-weight: 600; }
+.clipboard-sync .session-detail { margin: 4px 0 0; }
+.connected-panel .clipboard-switch { flex: 0 0 40px; justify-content: flex-start; width: 40px; height: 24px; padding: 3px; border-radius: 999px; background: #c5c9d0; }
+.connected-panel .clipboard-switch:hover:not(:disabled) { background: #b4bbc5; }
+.clipboard-switch span { display: block; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0002; }
+.connected-panel .clipboard-switch[aria-checked="true"] { background: #2175d5; }
+.connected-panel .clipboard-switch[aria-checked="true"]:hover:not(:disabled) { background: #1964b9; }
+.clipboard-switch[aria-checked="true"] span { transform: translateX(16px); }
+.clipboard-actions { display: flex; gap: 8px; margin-bottom: 12px; }
+.clipboard-actions button { flex: 1; }
+.clipboard-feedback { color: #626772; font-size: 11px; }
+.clipboard-manual { margin-top: 14px; border-top: 1px solid #e8e9ed; }
+.clipboard-manual summary { cursor: pointer; padding: 10px 0 2px; color: #626772; font-size: 12px; }
+.clipboard-manual summary:focus-visible { outline: 2px solid #2175d5; outline-offset: -2px; border-radius: 4px; }
+.clipboard-manual-fields { padding-top: 12px; }
+.clipboard-text { box-sizing: border-box; width: 100%; resize: vertical; min-height: 64px; max-height: 200px; padding: 8px; border: 1px solid #d8dce4; border-radius: 8px; background: #fff; color: #24262b; font: inherit; user-select: text; -webkit-user-select: text; touch-action: auto; }
+#clipboard-send-text { width: 100%; margin: 6px 0 12px; }
 #file-transfer-list { list-style: none; margin: 0; padding: 0; }
 .file-transfer-item { border-top: 1px solid #e0e2e8; padding: 12px 0; }
 .file-transfer-header { display: flex; align-items: center; gap: 8px; }

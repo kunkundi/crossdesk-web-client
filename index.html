@@ -81,7 +81,7 @@
     <!-- PWA Manifest (可选，用于更好的Web App体验) -->
     <link rel="manifest" href="manifest.json" />
 
-    <link rel="stylesheet" href="styles.css?v=2026.10.23.3" />
+    <link rel="stylesheet" href="styles.css?v=2026.10.29.1" />
     <script
       src="vendor/adapter-9.0.1.min.js"
       onload="console.info('[CrossDesk] Loaded WebRTC adapter from local: vendor/adapter-9.0.1.min.js');"
@@ -201,6 +201,33 @@
                   <button type="button" id="audio-toggle" class="session-tile" disabled aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path class="audio-icon-volume" d="M16 9a4 4 0 0 1 0 6m3-9a8 8 0 0 1 0 12"/><path class="audio-icon-mute" d="m17 9 5 6m0-6-5 6"/></svg><span id="audio-toggle-label">静音</span></button>
                   <button type="button" id="session-network" class="session-tile" data-page="network"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3v18h17M8 16v-4m5 4V8m5 8V5"/></svg><span id="session-network-label">网络状态</span></button>
                   <button type="button" id="session-files" class="session-tile" data-page="files"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H5v20h14V7Z M14 2v5h5 M8 12h8m-3-3 3 3-3 3 M16 18H8m3-3-3 3 3 3"/></svg><span id="session-files-label">文件传输</span></button>
+                  <button type="button" id="session-clipboard" class="session-tile" data-page="clipboard"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="18" rx="2"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 11h6m-6 4h6"/></svg><span>剪贴板</span></button>
+                </div>
+                <div data-session-page="clipboard" hidden>
+                  <p id="clipboard-state" class="session-detail" role="status" aria-live="polite">正在连接…</p>
+                  <div class="clipboard-sync">
+                    <div>
+                      <span id="clipboard-automatic-label" class="clipboard-sync-label">自动同步</span>
+                      <p id="clipboard-permissions" class="session-detail">开启后，在此页面同步复制的文本</p>
+                    </div>
+                    <button id="clipboard-automatic" class="clipboard-switch" type="button" role="switch" aria-checked="false" aria-labelledby="clipboard-automatic-label" aria-describedby="clipboard-permissions" disabled><span aria-hidden="true"></span></button>
+                  </div>
+                  <p id="clipboard-feedback" class="session-feedback clipboard-feedback" role="status" aria-live="polite"></p>
+                  <details id="clipboard-manual" class="clipboard-manual">
+                    <summary>手动传递文本</summary>
+                    <div class="clipboard-manual-fields">
+                      <div class="clipboard-actions">
+                        <button id="clipboard-send-local" type="button" disabled>发送到远端</button>
+                        <button id="clipboard-copy-remote" type="button" disabled>复制到本机</button>
+                      </div>
+                      <label class="session-field-label" for="clipboard-local">发送文本</label>
+                      <textarea id="clipboard-local" class="clipboard-text" rows="3" placeholder="粘贴或输入文本" spellcheck="false" autocomplete="off"></textarea>
+                      <button id="clipboard-send-text" type="button" disabled>发送</button>
+                      <label class="session-field-label" for="clipboard-remote">远端文本</label>
+                      <textarea id="clipboard-remote" class="clipboard-text" rows="3" readonly placeholder="暂无远端文本" spellcheck="false"></textarea>
+                      <p class="session-detail">仅纯文本 · 最多 128 KiB · 断开后清除会话内容</p>
+                    </div>
+                  </details>
                 </div>
                 <div data-session-page="video" hidden>
                   <fieldset><legend>画面质量</legend><div class="session-segments"><button type="button" data-setting="quality" data-value="0" aria-pressed="false" disabled>低</button><button type="button" data-setting="quality" data-value="1" aria-pressed="false" disabled>中</button><button type="button" data-setting="quality" data-value="2" aria-pressed="false" disabled>高</button></div></fieldset>
@@ -346,11 +373,12 @@
     </div>
 
 
-    <script src="control.js?v=2026.10.23.3"></script>
-    <script src="turn_credentials.js?v=2026.10.23.3"></script>
-    <script src="file_download.js?v=2026.10.23.3"></script>
-    <script src="file_transfer.js?v=2026.10.23.3"></script>
-    <script src="web_client.js?v=2026.10.23.3"></script>
-    <script src="session_controls.js?v=2026.10.23.3"></script>
+    <script src="control.js?v=2026.10.29.1"></script>
+    <script src="turn_credentials.js?v=2026.10.29.1"></script>
+    <script src="file_download.js?v=2026.10.29.1"></script>
+    <script src="file_transfer.js?v=2026.10.29.1"></script>
+    <script src="clipboard.js?v=2026.10.29.1"></script>
+    <script src="web_client.js?v=2026.10.29.1"></script>
+    <script src="session_controls.js?v=2026.10.29.1"></script>
   </body>
 </html>
