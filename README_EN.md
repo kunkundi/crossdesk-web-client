@@ -19,7 +19,7 @@ Connect to a [CrossDesk](https://github.com/kunkundi/crossdesk) desktop client f
 | Video and audio | WebRTC video, remote audio playback, and display switching when multiple video tracks are received |
 | Desktop input | Mouse movement, buttons, scrolling, and physical keyboard input |
 | Mobile input | Absolute / relative mouse modes, virtual mouse, virtual keyboard, zoom, and pan |
-| File transfer | Dual-pane directories, drag and drop, recursive folders, pagination, sorting, and bidirectional transfer progress; compatible with legacy file channels |
+| File transfer | Dual-pane directories, drag and drop, recursive folders, pagination, sorting, and bidirectional transfer progress; legacy hosts use the original transfer UI and protocol |
 | Clipboard | Bidirectional plain text, manual send/copy, and Unicode; requires desktop support for web clipboard synchronization |
 | Connection recovery | Signaling heartbeats and automatic reconnection, remote-session timeouts, and manual retry |
 | Self-hosting | Static hosting, custom WSS endpoints, server-issued session ICE configuration, and temporary TURN credentials |

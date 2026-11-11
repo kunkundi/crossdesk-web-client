@@ -665,6 +665,16 @@ video {
 .clipboard-manual-fields { padding-top: 12px; }
 .clipboard-text { box-sizing: border-box; width: 100%; resize: vertical; min-height: 64px; max-height: 200px; padding: 8px; border: 1px solid #d8dce4; border-radius: 8px; background: #fff; color: #24262b; font: inherit; user-select: text; -webkit-user-select: text; touch-action: auto; }
 #clipboard-send-text { width: 100%; margin: 6px 0 12px; }
+#file-transfer-list { list-style: none; margin: 0; padding: 0; }
+.file-transfer-item { border-top: 1px solid #e0e2e8; padding: 12px 0; }
+.file-transfer-header { display: flex; align-items: center; gap: 8px; }
+.file-transfer-header strong { flex: 1; min-width: 0; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.connected-panel .file-transfer-remove { flex: 0 0 24px; width: 24px; height: 24px; padding: 0; font-size: 16px; line-height: 1; }
+.file-transfer-item p { margin: 5px 0; font-size: 11px; color: #626772; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.file-transfer-item progress { display: block; width: 100%; height: 6px; margin: 8px 0; accent-color: #1262b3; }
+.file-transfer-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.file-transfer-item [hidden] { display: none; }
+
 /* The mouse bar follows the orb and yields its space while the menu is open. */
 #virtual-mouse {
   position: fixed;

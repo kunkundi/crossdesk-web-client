@@ -90,6 +90,10 @@
     open(files = window.CrossDeskFiles) {
       if (!files?.browser || files.closed) return;
       const browser = files.browser;
+      if (browser.supported !== true) {
+        window.CrossDeskSessionControls?.showPage("files");
+        return;
+      }
       if (this.browser !== browser) {
         this.hide(); this.browser = browser; this.expanded = undefined; this.source = "local";
         for (const pane of Object.values(this.panes)) {
@@ -118,6 +122,13 @@
     update(browser) {
       if (this.browser !== browser) return;
       if (browser.closed) { this.hide(); this.preparing = false; return; }
+      if (browser.supported !== true) {
+        if (this.dialog.open) {
+          this.hide();
+          if (window.CrossDeskFiles === browser.files) window.CrossDeskSessionControls?.showPage("files");
+        }
+        return;
+      }
       this.query(".fm-peer").textContent = browser.name === "远端" ? "" : browser.name;
       this.panes.remote.node.querySelector(".fm-location").textContent = "";
       this.panes.local.node.querySelector(".fm-location").textContent = browser.local?.name || "";
