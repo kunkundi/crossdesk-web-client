@@ -81,8 +81,8 @@
     <!-- PWA Manifest (可选，用于更好的Web App体验) -->
     <link rel="manifest" href="manifest.json" />
 
-    <link rel="stylesheet" href="file_manager.css?v=2026.11.11.5">
-    <link rel="stylesheet" href="styles.css?v=2026.11.11.5" />
+    <link rel="stylesheet" href="file_manager.css?v=2026.11.11.6">
+    <link rel="stylesheet" href="styles.css?v=2026.11.11.6" />
     <script
       src="vendor/adapter-9.0.1.min.js"
       onload="console.info('[CrossDesk] Loaded WebRTC adapter from local: vendor/adapter-9.0.1.min.js');"
@@ -261,8 +261,8 @@
                   <p id="file-transfer-empty" class="session-detail">暂无传输记录</p>
                 </div>
                 <div data-session-page="disconnect" hidden>
-                  <p>确定断开当前远程连接？</p>
-                  <p class="session-detail">进行中的传输和下载将停止；已下载完成的文件会保留。</p>
+                  <p class="session-confirm-title">确定断开当前远程连接？</p>
+                  <p class="session-confirm-detail">进行中的传输和下载将停止。<br>已下载完成的文件会保留。</p>
                   <div class="session-confirm-actions">
                     <button id="session-disconnect-cancel" type="button">取消</button>
                     <button id="session-disconnect-confirm" class="session-danger" type="button">断开连接</button>
@@ -377,15 +377,15 @@
     </div>
 
 
-    <script src="control.js?v=2026.11.11.5"></script>
-    <script src="turn_credentials.js?v=2026.11.11.5"></script>
-    <script src="file_download.js?v=2026.11.11.5"></script>
-    <script src="file_browser.js?v=2026.11.11.5"></script>
-    <script src="file_transfer.js?v=2026.11.11.5"></script>
-    <script src="file_manager.js?v=2026.11.11.5"></script>
-    <script src="clipboard.js?v=2026.11.11.5"></script>
-    <script src="display_resolutions.js?v=2026.11.11.5"></script>
-    <script src="web_client.js?v=2026.11.11.5"></script>
-    <script src="session_controls.js?v=2026.11.11.5"></script>
+    <script src="control.js?v=2026.11.11.6"></script>
+    <script src="turn_credentials.js?v=2026.11.11.6"></script>
+    <script src="file_download.js?v=2026.11.11.6"></script>
+    <script src="file_browser.js?v=2026.11.11.6"></script>
+    <script src="file_transfer.js?v=2026.11.11.6"></script>
+    <script src="file_manager.js?v=2026.11.11.6"></script>
+    <script src="clipboard.js?v=2026.11.11.6"></script>
+    <script src="display_resolutions.js?v=2026.11.11.6"></script>
+    <script src="web_client.js?v=2026.11.11.6"></script>
+    <script src="session_controls.js?v=2026.11.11.6"></script>
   </body>
 </html>

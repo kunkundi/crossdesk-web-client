@@ -143,11 +143,12 @@
       control.cancelLocalInput();
       control.lockedPanel.closeMenu();
       this.page = page;
+      panel.dataset.page = page;
       panel.hidden = false;
       shield.hidden = false;
       orb.setAttribute("aria-expanded", "true");
       byId("session-menu-title").textContent = pageTitles[page];
-      byId("session-menu-back").hidden = page === "main";
+      byId("session-menu-back").hidden = page === "main" || page === "disconnect";
       byId("disconnect-connected").hidden = page === "disconnect" || page === "clipboard";
       panel.querySelectorAll("[data-session-page]").forEach(el => el.hidden = el.dataset.sessionPage !== page);
       if (page === "disconnect") control.hideVirtualKeyboard();
@@ -170,6 +171,7 @@
       shield.hidden = true;
       orb.setAttribute("aria-expanded", "false");
       this.page = "main";
+      panel.dataset.page = "main";
       this.fileRows.clear();
       byId("file-transfer-list").replaceChildren();
       this.updateMouse();
