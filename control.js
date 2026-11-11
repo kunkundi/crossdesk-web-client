@@ -32,7 +32,7 @@
     return !["checkbox", "radio", "button", "submit", "reset"].includes(type);
   };
 
-  const LOCAL_CONTROLS = "#connected-panel, #panel-collapsed-bar, #session-menu-shield, #virtual-mouse, #virtual-keyboard, .locked-select-menu";
+  const LOCAL_CONTROLS = "#file-manager, #connected-panel, #panel-collapsed-bar, #session-menu-shield, #virtual-mouse, #virtual-keyboard, .locked-select-menu";
 
   // Pointer Lock targets the video even when the page cursor is over local UI.
   // Route only status-panel gestures here, keeping their press/release ownership

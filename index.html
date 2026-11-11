@@ -81,7 +81,8 @@
     <!-- PWA Manifest (可选，用于更好的Web App体验) -->
     <link rel="manifest" href="manifest.json" />
 
-    <link rel="stylesheet" href="styles.css?v=2026.10.29.1" />
+    <link rel="stylesheet" href="file_manager.css?v=2026.11.11.2">
+    <link rel="stylesheet" href="styles.css?v=2026.11.11.2" />
     <script
       src="vendor/adapter-9.0.1.min.js"
       onload="console.info('[CrossDesk] Loaded WebRTC adapter from local: vendor/adapter-9.0.1.min.js');"
@@ -247,15 +248,6 @@
                   <dl class="session-network"><div><dt>分辨率</dt><dd id="network-resolution">—</dd></div><div><dt>帧率</dt><dd id="network-fps">—</dd></div><div><dt>视频接收速率</dt><dd id="network-bitrate">—</dd></div><div><dt>视频丢包率</dt><dd id="network-loss">—</dd></div><div><dt>往返延迟</dt><dd id="network-rtt">—</dd></div><div><dt>画面缓冲</dt><dd id="network-buffer">—</dd></div><div><dt>解码耗时</dt><dd id="network-decode">—</dd></div><div><dt>连接方式</dt><dd id="network-route">—</dd></div></dl>
                   <p id="connected-client-version" class="client-version" aria-label="Web 客户端版本" hidden></p>
                 </div>
-                <div data-session-page="files" hidden>
-                  <p id="file-transfer-status" class="session-detail" role="status" aria-live="polite">等待文件通道连接…</p>
-                  <button id="file-transfer-select" type="button" disabled>选择文件并发送</button>
-                  <input id="file-transfer-input" type="file" multiple hidden>
-                  <p id="file-transfer-storage" class="session-detail">接收文件边传输边保存到浏览器下载目录。</p>
-                  <p id="file-transfer-feedback" class="session-feedback" role="status" aria-live="polite"></p>
-                  <ul id="file-transfer-list" aria-label="文件传输记录"></ul>
-                  <p id="file-transfer-empty" class="session-detail">暂无传输记录</p>
-                </div>
                 <div data-session-page="disconnect" hidden>
                   <p>确定断开当前远程连接？</p>
                   <p class="session-detail">进行中的传输和下载将停止；已下载完成的文件会保留。</p>
@@ -373,12 +365,14 @@
     </div>
 
 
-    <script src="control.js?v=2026.10.29.1"></script>
-    <script src="turn_credentials.js?v=2026.10.29.1"></script>
-    <script src="file_download.js?v=2026.10.29.1"></script>
-    <script src="file_transfer.js?v=2026.10.29.1"></script>
-    <script src="clipboard.js?v=2026.10.29.1"></script>
-    <script src="web_client.js?v=2026.10.29.1"></script>
-    <script src="session_controls.js?v=2026.10.29.1"></script>
+    <script src="control.js?v=2026.11.11.2"></script>
+    <script src="turn_credentials.js?v=2026.11.11.2"></script>
+    <script src="file_download.js?v=2026.11.11.2"></script>
+    <script src="file_browser.js?v=2026.11.11.2"></script>
+    <script src="file_transfer.js?v=2026.11.11.2"></script>
+    <script src="file_manager.js?v=2026.11.11.2"></script>
+    <script src="clipboard.js?v=2026.11.11.2"></script>
+    <script src="web_client.js?v=2026.11.11.2"></script>
+    <script src="session_controls.js?v=2026.11.11.2"></script>
   </body>
 </html>

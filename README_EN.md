@@ -19,7 +19,7 @@ Connect to a [CrossDesk](https://github.com/kunkundi/crossdesk) desktop client f
 | Video and audio | WebRTC video, remote audio playback, and display switching when multiple video tracks are received |
 | Desktop input | Mouse movement, buttons, scrolling, and physical keyboard input |
 | Mobile input | Absolute / relative mouse modes, virtual mouse, virtual keyboard, zoom, and pan |
-| File transfer | Bidirectional transfers, a send queue, progress, and cancellation; requires desktop/MiniRTC support for web file channels |
+| File transfer | Dual-pane directories, drag and drop, recursive folders, pagination, sorting, and sender progress; compatible with legacy file channels |
 | Clipboard | Bidirectional plain text, manual send/copy, and Unicode; requires desktop support for web clipboard synchronization |
 | Connection recovery | Signaling heartbeats and automatic reconnection, remote-session timeouts, and manual retry |
 | Self-hosting | Static hosting, custom WSS endpoints, server-issued session ICE configuration, and temporary TURN credentials |
@@ -51,7 +51,7 @@ Click the floating CrossDesk icon to open the menu; drag it to reposition it.
 | Mouse mode | Relative movement by default; switch to absolute positioning when needed |
 | Video settings | Quality level, frame rate, and smoothness/detail preference, subject to host support |
 | Network status / displays | Inspect live connection metrics and switch received video tracks |
-| File transfer | Send selected files, stream received files to browser downloads, and cancel or remove transfers |
+| File transfer | Browse local and remote folders, drag files/folders across panes, and choose a receive directory; browsers without directory access use file selection and streaming downloads |
 | Audio / disconnect | Play or mute remote audio; confirm before ending the session |
 
 See the [user guide](docs/USER_GUIDE_EN.md#controls) for touch gestures, pointer lock, zoom, audio, and control availability.

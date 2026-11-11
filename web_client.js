@@ -1,5 +1,5 @@
 // Update this and the asset cache keys with: node scripts/set-version.js <version>
-const WEB_CLIENT_VERSION = "2026.10.29.1";
+const WEB_CLIENT_VERSION = "2026.11.11.2";
 
 const elements = {
   clientVersion: document.getElementById("client-version"),
@@ -1430,6 +1430,7 @@ function bindDataChannel(channel, peer) {
     peer.crossdeskVideoSettings = new BrowserVideoSettings(peer);
   }
   peer.crossdeskVideoSettings.bind(channel);
+  peer.crossdeskFiles?.browser?.bind(channel);
   let advertised = false;
   const opened = () => {
     if (peer !== pc || control.dataChannel !== channel) return;

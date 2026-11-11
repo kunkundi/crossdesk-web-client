@@ -5,7 +5,7 @@
   const CHUNK_MAGIC = 0x4a4e544d, ACK_MAGIC = 0x4a4e5443;
   const HEADER_SIZE = 31, ACK_SIZE = 28, CHUNK_SIZE = 16 * 1024;
   const TIMEOUT = 30000, BUFFER_LIMIT = 256 * 1024, WINDOW_SIZE = 1024 * 1024;
-  const MAX_ITEMS = 100, RECEIVE_QUEUE_LIMIT = 8 * 1024 * 1024;
+  const MAX_ITEMS = 4096, RECEIVE_QUEUE_LIMIT = 8 * 1024 * 1024;
   const active = item => ["queued", "sending", "receiving", "saving"].includes(item.status);
   const safeName = name => name.replace(/\\/g, "/").split("/").pop()
     .replace(/[\x00-\x1f\x7f<>:"|?*]/g, "_").replace(/[. ]+$/g, "") || "download";
@@ -25,7 +25,7 @@
       this.incoming = new Map();
       this.finished = new Map();
       this.outgoing = null;
-      this.nextId = 0;
+      this.nextId = Math.floor(Math.random() * 0xffffffff);
       this.receiveQueue = [];
       this.queuedBytes = 0;
       this.draining = false;
@@ -38,6 +38,7 @@
       this.probeTimer = null;
       this.pending = [];
       this.pendingBytes = 0;
+      this.browser = window.CrossDeskFileBrowserSession ? new window.CrossDeskFileBrowserSession(this) : null;
       this.notify(true);
     }
 
@@ -51,6 +52,8 @@
     }
 
     async openTarget(item) {
+      if (await this.browser?.openTarget(item)) return;
+      if (!this.receiving(item)) throw new Error("Transfer ended");
       if (!this.canWriteFiles) throw new DOMException("Streaming download unavailable", "NotSupportedError");
       item.writer = new window.CrossDeskDownloadWriter(item.name, item.total, message => {
         if (this.receiving(item)) this.finishReceive(item, "failed", message);
@@ -70,8 +73,15 @@
       }
       clearTimeout(this.notification);
       this.notification = null;
-      window.CrossDeskFiles = this;
-      window.CrossDeskSessionControls?.renderFiles(this);
+      // Keep completed sender history bounded without limiting folder transfers.
+      const terminal = this.items.filter(item => item.direction === "send" && !active(item));
+      const retained = new Set(terminal.slice(-100));
+      this.items = this.items.filter(item => active(item) || retained.has(item));
+      if (!this.closed || !window.CrossDeskFiles || window.CrossDeskFiles === this) {
+        window.CrossDeskFiles = this;
+        window.CrossDeskSessionControls?.renderFiles(this);
+        this.browser?.notify();
+      }
     }
 
     probe() {
@@ -163,25 +173,33 @@
       }
     }
 
-    enqueue(files) {
-      if (!this.ready) return;
-      this.error = "";
+    allocateId() {
+      do { this.nextId = (this.nextId + 1) >>> 0 || 1; }
+      while (this.items.some(item => item.direction === "send" && item.id === this.nextId));
+      return this.nextId;
+    }
+
+    validate(files) {
+      if (!this.ready) throw new Error("文件通道尚未就绪，请稍后重试。");
+      if (this.items.filter(active).length + files.length > MAX_ITEMS)
+        throw new Error("传输队列已满，请等待当前任务完成后再发送。");
+      const maxMessage = this.peer.sctp?.maxMessageSize || Infinity;
       for (const file of files) {
-        if (this.items.length >= MAX_ITEMS) {
-          this.error = "最多保留 100 条记录，请先清除已结束的传输。";
-          break;
-        }
         const name = new TextEncoder().encode(file.name);
-        const maxMessage = this.peer.sctp?.maxMessageSize || Infinity;
         if (!name.length || name.length > 65535 || HEADER_SIZE + name.length >= maxMessage ||
-            !Number.isSafeInteger(file.size) || file.size < 0) {
-          this.error = "文件名过长或文件大小无效，请重新选择。";
-          continue;
-        }
-        this.nextId = (this.nextId + 1) >>> 0 || 1;
-        this.items.push({ id: this.nextId, direction: "send", name: file.name,
+            !Number.isSafeInteger(file.size) || file.size < 0)
+          throw new Error("文件名过长或文件大小无效，请重新选择。");
+      }
+    }
+
+    enqueue(files, ids = []) {
+      this.validate(files);
+      this.error = "";
+      for (let index = 0; index < files.length; index++) {
+        const file = files[index];
+        this.items.push({ id: ids[index] || this.allocateId(), direction: "send", name: file.name,
           total: file.size, bytes: 0, sent: 0, last: false, status: "queued", file,
-          wireName: name, updated: Date.now(), detail: "" });
+          wireName: new TextEncoder().encode(file.name), updated: Date.now(), detail: "" });
       }
       this.startNext();
       this.notify(true);
@@ -272,6 +290,7 @@
       item.detail = detail;
       item.file = null;
       item.wireName = null;
+      if (status === "completed") window.CrossDeskFileManager?.sent(this.browser);
       if (this.outgoing === item) this.outgoing = null;
       this.notify(true);
       this.startNext();
@@ -309,6 +328,7 @@
         return;
       }
       const reject = detail => {
+        this.browser?.forgetReservation(id);
         if (item) this.finishReceive(item, "failed", detail);
         else {
           this.remember(id, total, 0, 2);
@@ -319,6 +339,7 @@
       };
       if (flags === 4 && data.byteLength === HEADER_SIZE && offset === 0 && !size && !nameSize &&
           (!item || item.total === total)) {
+        this.browser?.forgetReservation(id);
         if (item) this.finishReceive(item, "cancelled", "远端已取消。");
         else { this.remember(id, total, 0, 2); this.ack(id, 0, total, 2); }
         return;
@@ -333,7 +354,7 @@
         return;
       }
       if (!item) {
-        if (this.incoming.size >= 4 || this.items.length >= MAX_ITEMS) {
+        if (this.incoming.size >= 4) {
           reject("接收任务或记录过多，请移除已结束的记录后重试。");
           return;
         }
@@ -364,11 +385,12 @@
           await item.writer.close();
           item.writer = null;
           if (!this.receiving(item)) return;
-          item.detail = "已传至浏览器下载，请在下载列表中查看保存结果。";
+          item.detail = item.savedToDirectory ? "已保存到本机目录。" : "已传至浏览器下载，请在下载列表中查看保存结果。";
           item.status = "completed";
           this.incoming.delete(item.id);
           this.remember(item.id, item.total, item.total, 1);
           this.ack(item.id, item.total, item.total, 1);
+          window.CrossDeskFileManager?.received(this.browser);
           this.notify(true);
         } else {
           this.ack(item.id, item.bytes, item.total, 0);
@@ -388,8 +410,8 @@
       if (item.direction !== "receive") return Promise.resolve();
       if (item.cleanup) return item.cleanup;
       // The download writer can abort an outstanding port request immediately.
-      item.writer?.abort();
-      item.cleanup = Promise.resolve(item.operation).catch(() => {}).then(() => { item.writer = null; });
+      const abort = Promise.resolve(item.writer?.abort()).catch(() => {});
+      item.cleanup = Promise.all([abort, Promise.resolve(item.operation).catch(() => {})]).then(() => { item.writer = null; });
       this.releasing.add(item.cleanup);
       item.cleanup.then(() => this.releasing.delete(item.cleanup));
       return item.cleanup;
@@ -409,7 +431,7 @@
       if (!this.items.includes(item) || !active(item)) return;
       if (item.direction === "receive") this.finishReceive(item, "cancelled", "已取消接收。");
       else if (item === this.outgoing) this.finishSend(item, "cancelled");
-      else { item.status = "cancelled"; item.file = null; item.wireName = null; this.notify(true); }
+      else { this.sendCancel(item); item.status = "cancelled"; item.file = null; item.wireName = null; this.notify(true); }
     }
 
     remove(item) {
@@ -432,6 +454,7 @@
     close(reason = "连接已结束。") {
       if (this.closed) return;
       this.closed = true;
+      this.browser?.close();
       this.state = "closed";
       this.error = reason;
       clearInterval(this.timer);
