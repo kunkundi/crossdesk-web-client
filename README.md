@@ -17,6 +17,7 @@
 | --- | --- |
 | 浏览器远程控制 | Web 端作为控制端，被控电脑运行 CrossDesk 桌面客户端 |
 | 画面与音频 | WebRTC 视频、远端音频播放，以及接收到多个视频轨道时的画面切换 |
+| 被控端分辨率 | 按显示器选择被控端提供的分辨率，确认成功后在浏览器记忆，重连时自动应用 |
 | 桌面操作 | 鼠标移动、按键、滚轮与物理键盘输入 |
 | 移动端操作 | 相对 / 绝对鼠标模式、虚拟鼠标、虚拟键盘、画面缩放和平移 |
 | 文件传输 | 双栏目录浏览、拖拽与文件夹传输、目录分页和排序、双向传输进度与取消；旧客户端自动使用原文件传输界面与协议 |
@@ -49,7 +50,7 @@
 | --- | --- |
 | 键盘 / 虚拟鼠标 | 电脑使用物理键鼠，触控设备使用虚拟按键、点击、滚动与拖动 |
 | 鼠标模式 | 默认相对移动，可切换绝对位置 |
-| 画面设置 | 调整画质、帧率及流畅 / 画质策略，可用项取决于被控端支持 |
+| 画面设置 | 调整当前屏幕的分辨率、画质、帧率及流畅 / 画质策略，可用项取决于被控端支持 |
 | 网络状态 / 显示器 | 查看实时连接指标，切换收到的视频轨道 |
 | 文件传输 | 同时浏览本机与远端目录，拖拽发送文件/文件夹，选择接收目录；不支持目录授权的浏览器使用文件选择与流式下载 |
 | 音频 / 断开连接 | 播放或静音远端音频，确认后结束会话 |
@@ -74,7 +75,7 @@ python3 -m http.server 8080 --bind 127.0.0.1
 
 ## 部署网页
 
-使用 HTTPS 静态托管，运行站点无需 Node.js。按原路径上传 `index.html`、`styles.css`、**七个应用脚本**（`control.js`、`turn_credentials.js`、`file_download.js`、`file_transfer.js`、`clipboard.js`、`web_client.js`、`session_controls.js`）、下载流处理脚本 `file_download_sw.js`、`vendor/`、`icons/`、`favicon.ico` 和 `manifest.json`。
+使用 HTTPS 静态托管，运行站点无需 Node.js。按原路径上传 `index.html` 引用的全部 CSS / JS（包括 `display_resolutions.js`）、下载流处理脚本 `file_download_sw.js`、`vendor/`、`icons/`、`favicon.ico` 和 `manifest.json`。
 
 GitHub Pages 选择发布分支及 `/(root)`。使用 GitHub 默认域名时删除官方 `CNAME`，自定义域名则在 Pages 中配置；自定义域名或子路径还需检查站点元数据及 manifest 的启动地址。
 

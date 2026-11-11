@@ -47,6 +47,9 @@ The touch layout uses the browser's pointer and hover capabilities, not screen s
 ### Switch displays and play audio
 
 - **Display:** open “显示器” in the menu and choose a received video track. Available options depend on the host's video tracks, and switching is enabled after the control data channel opens.
+- **Host resolution:** at the top of “画面设置” (Video settings), choose a supported resolution for the current screen under “被控端分辨率”. To adjust another screen, first switch to it in “显示器” (Displays). The selector shows the host-confirmed resolution and disables repeated changes while awaiting confirmation. Rejected changes or requests without confirmation after 10 seconds can be retried. Hosts that do not provide resolution metadata leave this control disabled.
+
+Successful selections are stored in this browser by signaling server, device ID and native display identity. On reconnection, a supporting host applies them before capture; missing displays or unavailable modes keep their current settings. Records do not sync between browsers or sites and are removed when site data is cleared. The most recent selections for up to 32 displays are retained within the existing Web control-message size limit. If browser storage is blocked, manual changes remain available without persistence.
 - **Audio:** the audio button remains disabled until a remote audio track arrives. If autoplay is blocked, click it to start playback; click again to mute. It controls browser playback, not the remote computer's system volume.
 - **Disconnect:** open “断开连接” and confirm to return to the form; cancel to keep the session. Signaling reconnection and remote-session establishment are separate; if a remote session fails and returns to the form, click Connect again.
 

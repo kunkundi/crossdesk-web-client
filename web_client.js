@@ -1,5 +1,5 @@
 // Update this and the asset cache keys with: node scripts/set-version.js <version>
-const WEB_CLIENT_VERSION = "2026.11.11.4";
+const WEB_CLIENT_VERSION = "2026.11.11.5";
 
 const elements = {
   clientVersion: document.getElementById("client-version"),
@@ -1236,6 +1236,7 @@ function createPeerConnection() {
   peer.crossdeskRemoteDescriptionReady = false;
   peer.crossdeskIceDiagnostics = new BrowserIceDiagnostics(peer);
   peer.crossdeskVideoSettings = new BrowserVideoSettings(peer);
+  peer.crossdeskDisplayResolutions = createDisplayResolutionSession(peer);
   peer.crossdeskFiles = window.CrossDeskFileTransferSession
     ? new window.CrossDeskFileTransferSession(peer) : null;
   peer.crossdeskClipboard = window.CrossDeskClipboardSession
@@ -1394,6 +1395,7 @@ function createPeerConnection() {
     if (currentIndex === 0 && !elements.displaySelect.value) {
       elements.displaySelect.value = String(currentIndex);
     }
+    peer.crossdeskDisplayResolutions?.notify();
   };
 
   peer.ondatachannel = (event) => {
@@ -1424,7 +1426,32 @@ function createPeerConnection() {
   return peer;
 }
 
+function createDisplayResolutionSession(peer) {
+  return window.CrossDeskDisplayResolutionSession ? new window.CrossDeskDisplayResolutionSession({
+    server: peer.crossdeskSession.signalingUrl, remoteId: peer.crossdeskSession.transmissionId,
+    isCurrent: channel => peer === pc && peer.crossdeskSession === connectionSession &&
+      isConnectionSessionActive && control.dataChannel === channel,
+    send: action => control.send(action),
+    onchange: resolutions => {
+      if (resolutions.closed) {
+        if (window.CrossDeskDisplayResolutions !== resolutions) return;
+        window.CrossDeskDisplayResolutions = null;
+      } else {
+        if (peer !== pc || !resolutions.current()) return;
+        window.CrossDeskDisplayResolutions = resolutions;
+      }
+      window.CrossDeskSessionControls?.renderResolutions(window.CrossDeskDisplayResolutions);
+    },
+  }) : null;
+}
+
 function bindDataChannel(channel, peer) {
+  if (peer.crossdeskDisplayResolutions?.channel && peer.crossdeskDisplayResolutions.channel !== channel) {
+    peer.crossdeskDisplayResolutions.close();
+    peer.crossdeskDisplayResolutions = createDisplayResolutionSession(peer);
+  }
+  // Startup preferences must precede the file browser's host-info advertisement.
+  peer.crossdeskDisplayResolutions?.bind(channel);
   if (peer.crossdeskVideoSettings.channel && peer.crossdeskVideoSettings.channel !== channel) {
     peer.crossdeskVideoSettings.close();
     peer.crossdeskVideoSettings = new BrowserVideoSettings(peer);
@@ -1547,6 +1574,7 @@ function connect() {
   setConnectionFeedback();
   connectionSession = {
     id: ++connectionAttempt, transmissionId: getTransmissionId(), userId: clientId,
+    signalingUrl: CONFIG.signalingUrl,
     generation: 0, pendingCandidates: [], retiredUfrags: new Set(), rejectedCandidates: 0,
   };
   window.CrossDeskIceDiagnostics = null;
@@ -1668,6 +1696,7 @@ function teardownPeerConnection() {
   setAudioToggleVisible(false);
   pc.crossdeskQos?.close();
   pc.crossdeskVideoSettings?.close();
+  pc.crossdeskDisplayResolutions?.close();
   pc.crossdeskFiles?.close();
   pc.crossdeskClipboard?.close();
   control.setDataChannel(null);
@@ -1753,6 +1782,7 @@ function setDisplayId() {
   }
   
   control.sendDisplayId(parsed);
+  pc?.crossdeskDisplayResolutions?.notify();
 }
 
 
@@ -1820,6 +1850,11 @@ if (elements.displaySelect) {
 window.CrossDeskSession = {
   defaultVideoSettings: DEFAULT_VIDEO_SETTINGS,
   requestVideoSettings(values) { return pc?.crossdeskVideoSettings?.request(values) || false; },
+  requestDisplayResolution(resolutions, displayId, displayKey, mode) {
+    if (resolutions !== pc?.crossdeskDisplayResolutions ||
+        elements.displaySelect?.value !== String(displayId)) return false;
+    return resolutions?.request(displayId, displayKey, mode) || false;
+  },
   disconnect,
 };
 

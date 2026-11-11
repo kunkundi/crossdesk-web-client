@@ -10,11 +10,6 @@
   const clamp = (n, min, max) => Math.max(min, Math.min(n, Math.max(min, max)));
   const pageTitles = { main: "远程控制", video: "画面设置", network: "网络状态",
     display: "显示器", files: "文件传输", clipboard: "剪贴板", disconnect: "断开连接" };
-  const preferenceDetails = [
-    "优先保持画面流畅，带宽或编码压力较大时会更积极地降低分辨率。",
-    "优先保持较高分辨率，带宽不足时先降低帧率，保持画面清晰。",
-    "兼顾清晰度和流畅度，在持续压力下逐步降低分辨率。",
-  ];
 
   class SessionControls {
     constructor() {
@@ -30,6 +25,7 @@
       this.fileRows = new Map();
       this.bindEvents();
       this.renderSettings(null);
+      this.renderResolutions(null);
       this.setConnected(false);
       this.renderFiles(window.CrossDeskFiles);
       this.renderClipboard(window.CrossDeskClipboard);
@@ -126,6 +122,7 @@
         control.hideVirtualKeyboard();
       }
       this.updateMouse();
+      this.renderResolutions(window.CrossDeskDisplayResolutions);
     }
 
     setVideoReady() {
@@ -160,6 +157,7 @@
       }
       this.updateMouse();
       this.renderSettings(window.CrossDeskVideoSettings);
+      this.renderResolutions(window.CrossDeskDisplayResolutions);
       this.renderNetwork(window.CrossDeskStats);
       this.renderFiles(window.CrossDeskFiles);
       this.renderClipboard(window.CrossDeskClipboard);
@@ -227,12 +225,52 @@
         button.disabled = !state?.supported;
         button.setAttribute("aria-pressed", String(selection[button.dataset.setting] === Number(button.dataset.value)));
       });
-      byId("video-preference-detail").textContent = preferenceDetails[selection.preference];
       const failed = ["failed", "rejected", "timeout"].includes(state?.status);
       byId("video-settings-feedback").textContent = !state?.supported
         ? "连接建立后可调整，需被控端支持。"
         : failed ? "调整失败，请重试。" : state.status === "pending" ? "正在应用…" : "";
       byId("video-settings-retry").hidden = !failed || !state?.supported;
+      this.layout();
+    }
+
+    renderResolutions(resolutions) {
+      const select = byId("display-resolution"), raw = byId("display-id").value;
+      const display = raw === "" ? null : resolutions?.display(Number(raw));
+      const signature = JSON.stringify([display || null, !!resolutions?.ready, !!resolutions?.pending]);
+      if (this.resolutionContext?.owner !== resolutions || this.resolutionSignature !== signature) {
+        // Invalidate pointer-lock menus whose display/mode snapshot has changed.
+        if (control.lockedPanel.menu?.select === select) control.lockedPanel.closeMenu();
+        this.resolutionSignature = signature;
+        this.resolutionContext = { owner: resolutions, displayId: display?.display_id, displayKey: display?.display_key };
+        select.replaceChildren();
+        const label = mode => `${mode.width} × ${mode.height}`;
+        if (display) {
+          const modes = display.modes.filter((mode, index, all) => all.findIndex(other =>
+            mode.width === other.width && mode.height === other.height) === index);
+          if (!modes.some(mode => mode.width === display.width && mode.height === display.height)) modes.unshift(display);
+          for (const mode of modes) {
+            const option = document.createElement("option");
+            option.value = `${mode.width}x${mode.height}`;
+            option.textContent = label(mode) + (mode.width === display.width && mode.height === display.height ? "（当前）" : "");
+            option.disabled = !display.modes.some(value => value.width === mode.width && value.height === mode.height);
+            select.appendChild(option);
+          }
+          select.value = `${display.width}x${display.height}`;
+        } else {
+          const option = document.createElement("option");
+          option.textContent = resolutions?.state.status === "waiting" || !resolutions ? "等待被控端信息…" : "设备不支持";
+          option.value = ""; select.appendChild(option);
+        }
+      }
+      if (display) select.value = `${display.width}x${display.height}`;
+      select.disabled = !this.connected || !resolutions?.ready || !display?.modes.length || resolutions.pending;
+      select.setAttribute("aria-busy", String(!!resolutions?.pending));
+      const status = resolutions?.state.status;
+      byId("display-resolution-feedback").textContent = !resolutions?.ready ? "连接建立后可调整。"
+        : resolutions.pending ? "等待电脑端确认…"
+        : ["failed", "timeout"].includes(status) ? "调整失败，请重新选择分辨率重试。"
+        : !display || !display.modes.length ? "被控端未提供此显示器的可用分辨率。"
+        : resolutions.state.storageFailed ? "分辨率已生效，但浏览器未能保存此设置。" : "";
       this.layout();
     }
 
@@ -440,6 +478,12 @@
       byId("video-settings-retry").addEventListener("click", () => {
         const values = window.CrossDeskVideoSettings?.requested;
         if (values) session.requestVideoSettings(values);
+      });
+      byId("display-resolution").addEventListener("change", event => {
+        const context = this.resolutionContext;
+        const [width, height] = event.target.value.split("x").map(Number);
+        if (context) session.requestDisplayResolution(context.owner, context.displayId, context.displayKey, { width, height });
+        this.renderResolutions(window.CrossDeskDisplayResolutions);
       });
       byId("session-keyboard").addEventListener("click", () => {
         this.close(); control.toggleVirtualKeyboard(); this.layout();

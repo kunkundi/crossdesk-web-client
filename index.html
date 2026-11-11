@@ -81,8 +81,8 @@
     <!-- PWA Manifest (可选，用于更好的Web App体验) -->
     <link rel="manifest" href="manifest.json" />
 
-    <link rel="stylesheet" href="file_manager.css?v=2026.11.11.4">
-    <link rel="stylesheet" href="styles.css?v=2026.11.11.4" />
+    <link rel="stylesheet" href="file_manager.css?v=2026.11.11.5">
+    <link rel="stylesheet" href="styles.css?v=2026.11.11.5" />
     <script
       src="vendor/adapter-9.0.1.min.js"
       onload="console.info('[CrossDesk] Loaded WebRTC adapter from local: vendor/adapter-9.0.1.min.js');"
@@ -231,12 +231,15 @@
                   </details>
                 </div>
                 <div data-session-page="video" hidden>
+                  <div class="resolution-setting">
+                    <label class="session-field-label" for="display-resolution">被控端分辨率</label>
+                    <select id="display-resolution" aria-describedby="display-resolution-feedback" disabled><option value="">等待被控端信息…</option></select>
+                    <p id="display-resolution-feedback" class="session-feedback" role="status" aria-live="polite"></p>
+                  </div>
                   <fieldset><legend>画面质量</legend><div class="session-segments"><button type="button" data-setting="quality" data-value="0" aria-pressed="false" disabled>低</button><button type="button" data-setting="quality" data-value="1" aria-pressed="false" disabled>中</button><button type="button" data-setting="quality" data-value="2" aria-pressed="false" disabled>高</button></div></fieldset>
 <fieldset><legend>帧率上限</legend><div class="session-segments"><button type="button" data-setting="frame_rate" data-value="30" aria-pressed="false" disabled>30 fps</button><button type="button" data-setting="frame_rate" data-value="60" aria-pressed="false" disabled>60 fps</button></div></fieldset>
 <fieldset><legend>画面偏好</legend><div class="session-segments"><button type="button" data-setting="preference" data-value="0" aria-pressed="false" disabled>帧率优先</button><button type="button" data-setting="preference" data-value="1" aria-pressed="false" disabled>画质优先</button><button type="button" data-setting="preference" data-value="2" aria-pressed="false" disabled>平衡</button></div></fieldset>
 
-                  <p id="video-preference-detail" class="session-detail"></p>
-                  <p class="session-detail">默认 30 fps，可切换至 60 fps；弱网下实际帧率会自动降低。</p>
                   <p id="video-settings-feedback" class="session-feedback" role="status" aria-live="polite"></p>
                   <button id="video-settings-retry" type="button" hidden>重试</button>
                 </div>
@@ -374,14 +377,15 @@
     </div>
 
 
-    <script src="control.js?v=2026.11.11.4"></script>
-    <script src="turn_credentials.js?v=2026.11.11.4"></script>
-    <script src="file_download.js?v=2026.11.11.4"></script>
-    <script src="file_browser.js?v=2026.11.11.4"></script>
-    <script src="file_transfer.js?v=2026.11.11.4"></script>
-    <script src="file_manager.js?v=2026.11.11.4"></script>
-    <script src="clipboard.js?v=2026.11.11.4"></script>
-    <script src="web_client.js?v=2026.11.11.4"></script>
-    <script src="session_controls.js?v=2026.11.11.4"></script>
+    <script src="control.js?v=2026.11.11.5"></script>
+    <script src="turn_credentials.js?v=2026.11.11.5"></script>
+    <script src="file_download.js?v=2026.11.11.5"></script>
+    <script src="file_browser.js?v=2026.11.11.5"></script>
+    <script src="file_transfer.js?v=2026.11.11.5"></script>
+    <script src="file_manager.js?v=2026.11.11.5"></script>
+    <script src="clipboard.js?v=2026.11.11.5"></script>
+    <script src="display_resolutions.js?v=2026.11.11.5"></script>
+    <script src="web_client.js?v=2026.11.11.5"></script>
+    <script src="session_controls.js?v=2026.11.11.5"></script>
   </body>
 </html>

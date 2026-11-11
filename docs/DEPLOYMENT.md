@@ -57,6 +57,7 @@ file_download.js
 file_download_sw.js
 file_transfer.js
 clipboard.js
+display_resolutions.js
 session_controls.js
 vendor/adapter-9.0.1.min.js
 icons/
@@ -76,7 +77,7 @@ manifest.json
 
 先按 [CrossDesk Server 部署说明](https://github.com/kunkundi/crossdesk-server#运行服务) 启动信令服务和 Coturn，并设置被控桌面端使用该服务。
 
-默认地址在 [web_client.js](../web_client.js) 的 `DEFAULT_CONFIG` 中。需要覆盖时，将以下代码插入 [index.html](../index.html) 底部、**现有 `control.js` 脚本标签之前**。保留所有现有脚本及 `?v=` 参数；应用脚本的加载顺序应为 `control.js` → `turn_credentials.js` → `file_download.js` → `file_transfer.js` → `clipboard.js` → `web_client.js` → `session_controls.js`。
+默认地址在 [web_client.js](../web_client.js) 的 `DEFAULT_CONFIG` 中。需要覆盖时，将以下代码插入 [index.html](../index.html) 底部、**现有 `control.js` 脚本标签之前**。保留所有现有脚本、它们的加载顺序及 `?v=` 参数；`display_resolutions.js` 必须在 `web_client.js` 之前加载，`session_controls.js` 在两者之后加载。
 
 ```html
 <script>
@@ -146,6 +147,7 @@ manifest.json
 | [file_transfer.js](../file_transfer.js) | 文件通道协商、分块收发、确认流控及取消 |
 | [file_download.js](../file_download.js) / [file_download_sw.js](../file_download_sw.js) | 以带背压的下载流交给浏览器，沿用默认下载目录及保存设置 |
 | [session_controls.js](../session_controls.js) | 悬浮菜单、画面设置、网络状态、显示器选择与断开确认 |
+| [display_resolutions.js](../display_resolutions.js) | 显示器分辨率校验、请求确认、超时和按服务器及设备隔离的本地记忆 |
 | [control.js](../control.js) | 控制协议、物理 / 虚拟键鼠、鼠标锁定与触控缩放 |
 | [turn_credentials.js](../turn_credentials.js) | 动态 TURN 凭据校验与 ICE 配置生成 |
 | [tests/turn_credentials_test.js](../tests/turn_credentials_test.js) | TURN 凭据解析测试 |
@@ -166,6 +168,7 @@ node --check file_download.js
 node --check file_download_sw.js
 node --check file_transfer.js
 node --check session_controls.js
+node --check display_resolutions.js
 ```
 
 这些检查覆盖凭据解析、模拟触控事件、模拟 WebRTC 信令与脚本语法，不能替代真实设备上的连接、音视频和输入测试。修改连接或触控逻辑后，应使用同一服务上的桌面端验证直连 / TURN、画面切换、断开重连和对应输入设备。

@@ -57,6 +57,7 @@ file_download.js
 file_download_sw.js
 file_transfer.js
 clipboard.js
+display_resolutions.js
 session_controls.js
 vendor/adapter-9.0.1.min.js
 icons/
@@ -76,7 +77,7 @@ The website serves static files. CrossDesk Server and Coturn provide WSS signali
 
 Deploy signaling and Coturn with the [CrossDesk Server instructions](https://github.com/kunkundi/crossdesk-server/blob/HEAD/README_EN.md#run-services), then configure the remote desktop client to use that service.
 
-Default endpoints are in `DEFAULT_CONFIG` in [web_client.js](../web_client.js). To override them, insert the following block near the bottom of [index.html](../index.html), **before the existing `control.js` script tag**. Keep all existing script tags and their `?v=` parameters. The application scripts must retain this order: `control.js` → `turn_credentials.js` → `file_download.js` → `file_transfer.js` → `clipboard.js` → `web_client.js` → `session_controls.js`.
+Default endpoints are in `DEFAULT_CONFIG` in [web_client.js](../web_client.js). To override them, insert the following block near the bottom of [index.html](../index.html), **before the existing `control.js` script tag**. Keep all existing scripts, their order and `?v=` parameters. Load `display_resolutions.js` before `web_client.js`, and `session_controls.js` after both.
 
 ```html
 <script>
@@ -146,6 +147,7 @@ All `Ms` values are in milliseconds. Interaction guards prevent browser actions 
 | [file_transfer.js](../file_transfer.js) | File channel negotiation, chunked transfer, acknowledgments, and cancellation |
 | [file_download.js](../file_download.js) / [file_download_sw.js](../file_download_sw.js) | A download stream with backpressure, using the browser’s default download location and save settings |
 | [session_controls.js](../session_controls.js) | Floating menu, video preferences, network metrics, display selection, and disconnect confirmation |
+| [display_resolutions.js](../display_resolutions.js) | Display-mode validation, request acknowledgement, timeouts, and browser persistence scoped by server and device |
 | [control.js](../control.js) | Control protocol, physical / virtual input, pointer lock, and touch zoom |
 | [turn_credentials.js](../turn_credentials.js) | TURN credential validation and ICE configuration generation |
 | [tests/turn_credentials_test.js](../tests/turn_credentials_test.js) | TURN credential parser tests |
@@ -166,6 +168,7 @@ node --check file_download.js
 node --check file_download_sw.js
 node --check file_transfer.js
 node --check session_controls.js
+node --check display_resolutions.js
 ```
 
 These checks cover credential parsing, simulated touch events, simulated WebRTC signaling, and script syntax, not live connectivity, media, or input. After changing connection or touch logic, use a desktop host on the same service to verify direct / TURN connections, display switching, disconnect/reconnect behavior, and the relevant input devices.

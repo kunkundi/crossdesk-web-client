@@ -637,7 +637,9 @@ video {
 .session-feedback { margin: 8px 0 0; color: #8b5959; font-size: 12px; }
 .session-feedback:empty { display: none; }
 #video-settings-retry { margin-top: 8px; }
-#display-id { width: 100%; box-sizing: border-box; background: #eeeef2; color: #24262b; border: 0; padding: 10px; border-radius: 8px; }
+#display-id, #display-resolution { width: 100%; box-sizing: border-box; background: #eeeef2; color: #24262b; border: 0; padding: 10px; border-radius: 8px; }
+#display-resolution:disabled { opacity: .55; cursor: not-allowed; }
+.resolution-setting { margin-bottom: 12px; }
 .session-network { margin: 0; font-size: 12px; }
 .session-network > div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid #ececf0; }
 .session-network dt { color: #737780; }
