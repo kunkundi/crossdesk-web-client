@@ -73,8 +73,8 @@
       }
       clearTimeout(this.notification);
       this.notification = null;
-      // Keep completed sender history bounded without limiting folder transfers.
-      const terminal = this.items.filter(item => item.direction === "send" && !active(item));
+      // Bound finished history in both directions without limiting active transfers.
+      const terminal = this.items.filter(item => !active(item));
       const retained = new Set(terminal.slice(-100));
       this.items = this.items.filter(item => active(item) || retained.has(item));
       if (!this.closed || !window.CrossDeskFiles || window.CrossDeskFiles === this) {

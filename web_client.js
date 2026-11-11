@@ -1,5 +1,5 @@
 // Update this and the asset cache keys with: node scripts/set-version.js <version>
-const WEB_CLIENT_VERSION = "2026.11.11.2";
+const WEB_CLIENT_VERSION = "2026.11.11.3";
 
 const elements = {
   clientVersion: document.getElementById("client-version"),

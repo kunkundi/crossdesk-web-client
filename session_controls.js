@@ -248,7 +248,7 @@
     }
 
     renderFiles(files) {
-      const busy = (files?.items || []).filter(item => item.direction === "send" && ["queued", "sending"].includes(item.status)).length;
+      const busy = (files?.items || []).filter(item => ["queued", "sending", "receiving", "saving"].includes(item.status)).length;
       byId("session-files-label").textContent = busy ? `文件传输 (${busy})` : "文件传输";
       orb.classList.remove("has-file-updates");
       orb.setAttribute("aria-label", "远程控制菜单");

@@ -13,8 +13,9 @@
   const button = (action, title, glyph) => `<button type="button" data-action="${action}" title="${title}" aria-label="${title}" class="fm-icon">${icon(glyph)}</button>`;
   const format = bytes => bytes < 1024 ? `${bytes} B` : bytes < 1024 ** 2 ? `${(bytes / 1024).toFixed(1)} KB`
     : bytes < 1024 ** 3 ? `${(bytes / 1024 ** 2).toFixed(1)} MB` : `${(bytes / 1024 ** 3).toFixed(1)} GB`;
-  const labels = { queued: "排队中", sending: "发送中", completed: "已完成", failed: "失败", cancelled: "已取消" };
-  const running = item => ["queued", "sending"].includes(item.status);
+  const labels = { queued: "排队中", sending: "发送中", receiving: "接收中", saving: "正在保存", completed: "已完成", failed: "失败", cancelled: "已取消" };
+  const running = item => ["queued", "sending", "receiving", "saving"].includes(item.status);
+  const direction = item => item.direction === "receive" ? "接收" : "发送";
   const el = (tag, className, content) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -90,7 +91,7 @@
       if (!files?.browser || files.closed) return;
       const browser = files.browser;
       if (this.browser !== browser) {
-        this.hide(); this.browser = browser; this.expanded = false; this.source = "local";
+        this.hide(); this.browser = browser; this.expanded = undefined; this.source = "local";
         for (const pane of Object.values(this.panes)) {
           Object.assign(pane, { path: "", parent: "", entries: [], visible: [], loaded: false, busy: false, error: "", query: "", ticket: pane.ticket + 1 });
           pane.selected.clear(); pane.node.querySelector("input[type=search]").value = "";
@@ -476,7 +477,9 @@
       finally { if (browser === this.browser) { this.preparing = false; this.renderActions(); } }
     }
     renderTasks() {
-      const items = this.browser?.files.items.filter(item => item.direction === "send") || [];
+      const items = this.browser?.files.items || [];
+      // Show the first transfer automatically, then respect the user's collapse choice.
+      if (this.expanded === undefined && items.length) this.expanded = true;
       const busy = items.filter(running).length, list = this.query(".fm-tasks");
       const toggle = this.query(".fm-tasks-toggle");
       toggle.textContent = `${this.expanded ? "⌄" : "›"} 传输任务 · ${items.length ? `${items.length} 项${busy ? `，${busy} 项进行中` : ""}` : "暂无任务"}`;
@@ -484,14 +487,14 @@
       this.query(".fm-clear").disabled = !items.some(item => !running(item));
       if (!this.expanded) return;
       const scroll = list.scrollTop;
-      const key = `${Math.floor(scroll / 40)}:${items.map(item => item.id).join(",")}`;
+      const key = `${Math.floor(scroll / 40)}:${items.map(item => `${item.direction}:${item.id}`).join(",")}`;
       if (this.taskKey === key && this.taskBrowser === this.browser) {
         for (const row of list.querySelectorAll(".fm-task")) {
           const item = items[Number(row.dataset.index)];
           row.querySelector("progress").value = item.status === "completed" ? 1 : item.total ? item.bytes / item.total : 0;
           const status = row.querySelector(".fm-task-status"); status.textContent = labels[item.status]; status.title = item.detail || ""; status.classList.toggle("fm-error", item.status === "failed");
           const cancel = row.querySelector("button"); cancel.textContent = running(item) ? "取消" : "×";
-          cancel.setAttribute("aria-label", `${running(item) ? "取消发送" : "移除记录"} ${item.name}`);
+          cancel.setAttribute("aria-label", `${running(item) ? `取消${direction(item)}` : "移除记录"} ${item.name}`);
         }
         return;
       }
@@ -503,12 +506,12 @@
       for (let i = start; i < end; i++) {
         const item = items[i], row = el("div", "fm-task"), name = el("span", "fm-task-name", item.name), size = el("span", "fm-task-size", format(item.total));
         row.style.top = `${i * height}px`; row.dataset.index = i; name.title = item.name;
-        const identity = el("div", "fm-task-identity"); identity.append(name, size);
+        const identity = el("div", "fm-task-identity"); identity.append(el("span", "fm-task-direction", direction(item)), name, size);
         const progress = el("progress"); progress.max = 1; progress.value = item.status === "completed" ? 1 : item.total ? item.bytes / item.total : 0;
-        progress.setAttribute("aria-label", `${item.name} 发送进度`);
+        progress.setAttribute("aria-label", `${item.name} ${direction(item)}进度`);
         const status = el("span", "fm-task-status", labels[item.status] || item.status); status.title = item.detail || ""; status.classList.toggle("fm-error", item.status === "failed");
         const cancel = el("button", "fm-task-cancel", running(item) ? "取消" : "×");
-        cancel.setAttribute("aria-label", `${running(item) ? "取消发送" : "移除记录"} ${item.name}`);
+        cancel.setAttribute("aria-label", `${running(item) ? `取消${direction(item)}` : "移除记录"} ${item.name}`);
         cancel.onclick = () => running(item) ? this.browser.files.cancel(item) : this.browser.files.remove(item);
         row.append(identity, progress, status, cancel); content.append(row);
       }
