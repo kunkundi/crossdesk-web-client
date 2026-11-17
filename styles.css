@@ -54,83 +54,158 @@ body {
   overflow: hidden;
 }
 
-/* Connection overlay (shown when not connected) */
+/* Connection page */
 .connection-overlay {
+  --ink: #19365b;
+  --muted: #526a87;
+  --primary-color: #255397;
+  --hover-color: #1e4279;
+  --line: #d6e3f2;
+  --disabled-color: #d6e3f2;
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: #c8c8c8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  inset: 0;
   z-index: 1000;
-  overflow: hidden;
+  display: flex;
+  overflow: auto;
+  padding: clamp(24px, 6vw, 80px) 6%;
+  border-top: 1px solid var(--line);
+  background:
+    linear-gradient(0deg, #f5f8fc, transparent 38%),
+    linear-gradient(115deg, #f5f9fe, #edf4fc 52%, #e0ebf8);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
-/* CrossDesk background text */
-.connection-overlay::before {
-  content: "CrossDesk";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: clamp(30px, 12vw, 320px);
-  font-weight: 900;
-  color: rgba(0, 0, 0, 1);
-  white-space: nowrap;
-  letter-spacing: 0.05em;
-  z-index: 0;
-  pointer-events: none;
-  font-family: "Verdana", -apple-system, BlinkMacSystemFont, "Arial Black", "Helvetica Neue", sans-serif;
-  font-stretch: condensed;
-  max-width: 98%;
-  width: fit-content;
-  box-sizing: border-box;
-  overflow: visible;
-}
-
-/* Glassmorphism layer covering CrossDesk text */
-.connection-overlay::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
+.connection-layout {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(310px, 1fr);
+  grid-template-areas: "intro panel" "resources panel";
+  align-items: center;
+  gap: 30px clamp(32px, 7vw, 120px);
   width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  z-index: 1;
+  max-width: 1180px;
+  margin: auto;
+  padding-block: 42px;
+}
+
+.connection-layout::before {
+  content: "CrossDesk" / "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  z-index: -1;
+  transform: translateX(-50%);
+  font: 600 min(19vw, 300px)/1.1 -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.065em;
+  color: rgb(69 135 219 / 13%);
+  text-shadow: 0 5px 22px #25539719;
+  filter: blur(3px);
   pointer-events: none;
+}
+
+.connection-intro {
+  grid-area: intro;
+  align-self: end;
+}
+
+.connection-intro h1 {
+  margin: 0 0 26px;
+  font-size: clamp(32px, 4vw, 56px);
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: -0.05em;
+}
+
+.connection-intro h1 span {
+  display: block;
+  color: #4587db;
+}
+
+.connection-intro p {
+  max-width: 480px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.95;
+}
+
+.connection-resources {
+  grid-area: resources;
+  align-self: start;
+}
+
+.resource-actions,
+.resource-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.resource-actions a {
+  display: inline-grid;
+  place-items: center;
+  min-height: 48px;
+  padding: 0 24px;
+  border: 1px solid #b9cfe9;
+  border-radius: 2px;
+  background: #ffffffc9;
+  color: var(--primary-color);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.resource-actions a:first-child {
+  border-color: var(--primary-color);
+  background: var(--primary-color);
+  color: #fff;
+}
+
+.resource-actions a:hover {
+  border-color: var(--primary-color);
+  background: #fff;
+}
+
+.resource-actions a:first-child:hover {
+  background: var(--hover-color);
+}
+
+.resource-links {
+  gap: 8px 26px;
+  margin-top: 20px;
+}
+
+.resource-links a {
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration-color: #b9cfe9;
+  text-underline-offset: 5px;
+}
+
+.resource-links a:hover {
+  color: var(--primary-color);
+  text-decoration-color: currentColor;
+}
+
+.connection-overlay a:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 4px;
 }
 
 .connection-panel {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
-  border-radius: 24px; /* Same radius as status bar panel */
-  padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  width: clamp(280px, 85%, 320px);
   position: relative;
-  z-index: 2;
-  /* Disable text selection and copying */
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  /* Disable double-tap zoom on mobile */
-  touch-action: manipulation;
-  -ms-touch-action: manipulation;
-  /* Add subtle border for better visibility */
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  grid-area: panel;
+  padding: clamp(24px, 3.5vw, 48px);
+  background: #fff;
+  box-shadow: 0 24px 50px #25539719;
 }
 
 .client-version {
-  margin: 12px 0 0;
-  color: var(--secondary-text-color);
+  margin: 16px 0 0;
+  color: var(--muted, #666);
   font-size: 12px;
   line-height: 1.4;
   text-align: center;
@@ -138,106 +213,11 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Reduce width in portrait orientation */
-@media (orientation: portrait) {
-  .connection-panel {
-    width: clamp(260px, 75%, 280px);
-  }
-  
-  /* Keep label and input on same line in portrait mode if space allows */
-  .option {
-    flex-wrap: nowrap;
-  }
-  
-  .option label {
-    width: auto;
-    min-width: 100px;
-    margin-bottom: 0;
-    flex-shrink: 0;
-  }
-}
-
-/* Mobile landscape - reduce width for phones in landscape */
-@media (max-width: 900px) and (orientation: landscape) {
-  .connection-panel {
-    width: clamp(280px, 60%, 320px);
-  }
-}
-
-.connection-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-  /* Disable text selection and interaction */
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  pointer-events: none;
-  /* Disable double-tap zoom */
-  touch-action: manipulation;
-  -ms-touch-action: manipulation;
-}
-
-/* Re-enable pointer events for interactive elements */
-.connection-header button,
-.connection-header .status-indicator {
-  pointer-events: auto;
-}
-
-.connection-title-with-icon {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  /* Disable interaction */
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  touch-action: manipulation;
-  -ms-touch-action: manipulation;
-}
-
-.connection-icon {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  flex-shrink: 0;
-  /* Disable interaction and dragging */
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-user-drag: none;
-  -khtml-user-drag: none;
-  -moz-user-drag: none;
-  -o-user-drag: none;
-  user-drag: none;
-  touch-action: manipulation;
-  -ms-touch-action: manipulation;
-}
-
-.connection-header h2 {
-  margin: 0;
-  color: #444;
-  font-weight: 700;
-  font-size: 1.5rem;
-  /* Disable interaction */
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  touch-action: manipulation;
-  -ms-touch-action: manipulation;
-}
-
 /* Status LED indicator */
 .status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  position: absolute;
+  top: 16px;
+  right: 16px;
 }
 
 .status-led {
@@ -269,117 +249,80 @@ body {
   }
 }
 
-/* Option styles */
-.option {
-  display: flex;
-  align-items: center;
-  margin-bottom: 15px;
-  gap: 10px;
+.connection-panel .option {
+  display: grid;
+  gap: 6px;
 }
 
-.option.compact {
-  margin-bottom: 8px;
-  gap: 8px;
+.connection-panel .option + .option {
+  margin-top: 18px;
 }
 
-.option label {
-  width: 120px;
-  color: var(--secondary-text-color);
-  font-weight: 500;
+.connection-panel label {
   font-size: 14px;
-  flex-shrink: 0;
-  /* Disable interaction on labels */
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  /* Disable double-tap zoom */
-  touch-action: manipulation;
-  -ms-touch-action: manipulation;
+  font-weight: 600;
 }
 
-.option.compact label {
-  width: auto;
-  min-width: auto;
-  font-size: 13px;
-}
-
-.option input {
-  flex: 1;
-  padding: 10px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  font-size: 14px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+.connection-panel input {
+  width: 100%;
   min-width: 0;
-  max-width: 200px; /* Limit input box width */
-  /* Re-enable interaction for input fields */
-  pointer-events: auto;
-  user-select: text;
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
+  min-height: 46px;
+  padding: 8px 12px;
+  border: 1px solid #b9cfe9;
+  border-radius: 2px;
+  background: #fbfdff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
 }
 
-.option input:focus {
-  outline: none;
+.connection-panel input::placeholder {
+  color: #637993;
+}
+
+.connection-panel input:focus {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+  outline: 2px solid #4587db55;
+  outline-offset: 0;
 }
 
-.option input[aria-invalid="true"] {
-  border-color: var(--danger-color);
-  box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.12);
+.connection-panel input[aria-invalid="true"] {
+  border-color: #b33737;
 }
 
 .connection-feedback {
-  display: none;
-  margin: -2px 0 12px;
-  color: var(--secondary-text-color);
+  /* Reserve two lines so even a wrapped warning keeps the form in place. */
+  display: grid;
+  align-content: center;
+  min-height: 3em;
+  margin: 0;
+  color: var(--muted);
   font-size: 13px;
   line-height: 1.5;
 }
 
-.connection-feedback:not(:empty) {
-  display: block;
-}
-
 .connection-feedback[data-tone="error"] {
-  color: #c62828;
+  color: #b33737;
 }
 
-.option select {
-  padding: 8px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  font-size: 13px;
-  background-color: var(--card-background);
-  height: 36px;
-  box-sizing: border-box;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.option select:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
-}
-
-.option select:disabled {
-  background-color: #f3f3f3;
-  color: #999;
-  cursor: not-allowed;
-}
-
-.actions {
+.connection-panel .actions {
   display: flex;
-  gap: 10px;
-  margin-top: 20px;
   flex-wrap: wrap;
-  /* Re-enable interaction for buttons */
-  pointer-events: auto;
+  gap: 8px;
 }
+
+.connection-panel button {
+  flex: 1 1 auto;
+  min-height: 46px;
+  border-radius: 2px;
+  font: inherit;
+  font-weight: 600;
+}
+
+.connection-panel button:disabled {
+  color: #526a87;
+}
+
 
 button {
   padding: 10px 20px;
@@ -414,12 +357,14 @@ button:disabled {
   transform: none;
 }
 
-.secondary-btn {
-  background-color: #607d8b;
+.connection-panel .secondary-btn {
+  border: 1px solid #b9cfe9;
+  background: #fff;
+  color: var(--primary-color);
 }
 
-.secondary-btn:hover:not(:disabled) {
-  background-color: #546e7a;
+.connection-panel .secondary-btn:hover:not(:disabled) {
+  background: #edf4fc;
 }
 
 #disconnect {
@@ -940,44 +885,31 @@ select:focus {
   border: 1px solid rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Mobile responsive - small screens */
-@media (max-width: 768px) {
-  .connection-panel {
-    padding: 20px;
+@media (max-width: 760px) {
+  .connection-overlay {
+    padding: 24px max(16px, 5vw);
+  }
+
+  .connection-layout {
+    max-width: 480px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "intro" "panel" "resources";
+    gap: 24px;
+    padding-block: 8px 24px;
+  }
+
+  .connection-intro h1 {
+    font-size: clamp(27px, 6.5vw, 36px);
+    margin-bottom: 12px;
+  }
+
+  .connection-intro p {
+    font-size: 14px;
+    line-height: 1.7;
   }
 }
 
-/* Further reduce width in portrait on small screens */
-@media (max-width: 768px) and (orientation: portrait) {
-  .connection-panel {
-    width: clamp(240px, 70%, 280px);
-  }
-}
-
 @media (max-width: 768px) {
-  .connection-panel .option {
-    flex-wrap: nowrap; /* Keep label and input on same line if space allows */
-  }
-
-  .connection-panel .option label {
-    width: auto;
-    min-width: 100px; /* Minimum width for label */
-    margin-bottom: 0; /* Remove bottom margin to keep on same line */
-    flex-shrink: 0; /* Prevent label from shrinking */
-  }
-  
-  /* Only wrap if screen is very narrow */
-  @media (max-width: 400px) {
-    .connection-panel .option {
-      flex-wrap: wrap;
-    }
-    
-    .connection-panel .option label {
-      width: 100%;
-      margin-bottom: 5px;
-    }
-  }
-
   .control-buttons {
     width: 100%;
 }

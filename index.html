@@ -69,7 +69,7 @@
       content="black-translucent"
     />
     <meta name="apple-mobile-web-app-title" content="CrossDesk" />
-    <meta name="theme-color" content="#2196f3" />
+    <meta name="theme-color" content="#edf4fc" />
 
     <!-- 图标配置 -->
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
@@ -81,8 +81,8 @@
     <!-- PWA Manifest (可选，用于更好的Web App体验) -->
     <link rel="manifest" href="manifest.json" />
 
-    <link rel="stylesheet" href="file_manager.css?v=2026.11.11.6">
-    <link rel="stylesheet" href="styles.css?v=2026.11.11.6" />
+    <link rel="stylesheet" href="file_manager.css?v=2026.11.18.1">
+    <link rel="stylesheet" href="styles.css?v=2026.11.18.1" />
     <script
       src="vendor/adapter-9.0.1.min.js"
       onload="console.info('[CrossDesk] Loaded WebRTC adapter from local: vendor/adapter-9.0.1.min.js');"
@@ -93,12 +93,12 @@
     <div class="app-container" data-nosnippet>
       <!-- Connection settings overlay (shown when not connected) -->
       <div id="connection-overlay" class="connection-overlay">
-        <div class="connection-panel">
-          <div class="connection-header">
-            <div class="connection-title-with-icon">
-              <img src="icons/crossdesk-180-circle.png" alt="CrossDesk" class="connection-icon" />
-              <h2>CrossDesk</h2>
-            </div>
+        <main class="connection-layout" aria-labelledby="connection-title">
+          <div class="connection-intro">
+            <h1 id="connection-title">面向未来的<span>远程桌面。</span></h1>
+            <p>CrossDesk 是一款免费开源的跨平台远程桌面软件。通过 MCP，你可以用自然语言让 AI 操作远程设备。</p>
+          </div>
+          <section class="connection-panel" aria-label="连接设备">
             <div
               class="status-indicator"
               id="connection-status-indicator"
@@ -109,48 +109,61 @@
                 class="status-led status-led-off"
               ></div>
             </div>
-          </div>
-          <form id="connection-form" novalidate>
-            <div class="option">
-              <label for="transmission-id">远程设备 ID:</label>
-              <input
-                id="transmission-id"
-                type="text"
-                value=""
-                autocomplete="off"
-                aria-describedby="connection-feedback"
-                required
-              />
+            <form id="connection-form" novalidate>
+              <div class="option">
+                <label for="transmission-id">远程设备 ID</label>
+                <input
+                  id="transmission-id"
+                  type="text"
+                  value=""
+                  placeholder="输入远程设备 ID"
+                  autocomplete="off"
+                  aria-describedby="connection-feedback"
+                  required
+                />
+              </div>
+              <div class="option">
+                <label for="transmission-pwd">密码</label>
+                <input
+                  id="transmission-pwd"
+                  type="password"
+                  value=""
+                  placeholder="输入 6 位密码"
+                  autocomplete="current-password"
+                  aria-describedby="connection-feedback"
+                  minlength="6"
+                  maxlength="6"
+                  required
+                />
+              </div>
+              <p
+                id="connection-feedback"
+                class="connection-feedback"
+                role="status"
+                aria-live="polite"
+              ></p>
+              <div class="actions">
+                <button id="connect" type="submit" disabled>连接</button>
+                <button id="retry-signaling" type="button" class="secondary-btn" style="display: none">
+                  重连服务器
+                </button>
+                <button id="disconnect" type="button" style="display: none">断开连接</button>
+              </div>
+            </form>
+            <p id="client-version" class="client-version" aria-label="Web 客户端版本" hidden></p>
+          </section>
+          <nav class="connection-resources" aria-label="CrossDesk 资源">
+            <div class="resource-actions">
+              <a href="https://www.crossdesk.cn/download/">下载 CrossDesk</a>
+              <a href="#transmission-id">打开 Web 客户端</a>
             </div>
-            <div class="option">
-              <label for="transmission-pwd">密码:</label>
-              <input
-                id="transmission-pwd"
-                type="password"
-                value=""
-                autocomplete="current-password"
-                aria-describedby="connection-feedback"
-                minlength="6"
-                maxlength="6"
-                required
-              />
+            <div class="resource-links">
+              <a href="https://github.com/kunkundi/crossdesk-web-client">查看源代码</a>
+              <a href="https://www.crossdesk.cn/self-hosting/">自托管指南</a>
+              <a href="https://www.crossdesk.cn/#sponsor">赞助支持</a>
             </div>
-            <p
-              id="connection-feedback"
-              class="connection-feedback"
-              role="status"
-              aria-live="polite"
-            ></p>
-            <div class="actions">
-              <button id="connect" type="submit" disabled>连接</button>
-              <button id="retry-signaling" type="button" class="secondary-btn" style="display: none">
-                重连服务器
-              </button>
-              <button id="disconnect" type="button" style="display: none">断开连接</button>
-            </div>
-          </form>
-          <p id="client-version" class="client-version" aria-label="Web 客户端版本" hidden></p>
-        </div>
+          </nav>
+        </main>
       </div>
 
       <!-- Video display -->
@@ -377,15 +390,15 @@
     </div>
 
 
-    <script src="control.js?v=2026.11.11.6"></script>
-    <script src="turn_credentials.js?v=2026.11.11.6"></script>
-    <script src="file_download.js?v=2026.11.11.6"></script>
-    <script src="file_browser.js?v=2026.11.11.6"></script>
-    <script src="file_transfer.js?v=2026.11.11.6"></script>
-    <script src="file_manager.js?v=2026.11.11.6"></script>
-    <script src="clipboard.js?v=2026.11.11.6"></script>
-    <script src="display_resolutions.js?v=2026.11.11.6"></script>
-    <script src="web_client.js?v=2026.11.11.6"></script>
-    <script src="session_controls.js?v=2026.11.11.6"></script>
+    <script src="control.js?v=2026.11.18.1"></script>
+    <script src="turn_credentials.js?v=2026.11.18.1"></script>
+    <script src="file_download.js?v=2026.11.18.1"></script>
+    <script src="file_browser.js?v=2026.11.18.1"></script>
+    <script src="file_transfer.js?v=2026.11.18.1"></script>
+    <script src="file_manager.js?v=2026.11.18.1"></script>
+    <script src="clipboard.js?v=2026.11.18.1"></script>
+    <script src="display_resolutions.js?v=2026.11.18.1"></script>
+    <script src="web_client.js?v=2026.11.18.1"></script>
+    <script src="session_controls.js?v=2026.11.18.1"></script>
   </body>
 </html>

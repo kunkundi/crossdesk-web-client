@@ -4,8 +4,8 @@
   "description": "CrossDesk 的浏览器远程桌面客户端，支持通过 WebRTC 连接远程桌面并进行鼠标键盘控制。",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f5f5f5",
-  "theme_color": "#2196f3",
+  "background_color": "#edf4fc",
+  "theme_color": "#edf4fc",
   "orientation": "any",
   "icons": [
     {
