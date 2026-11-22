@@ -400,7 +400,6 @@ video {
   height: 100%;
   object-fit: contain;
   display: block;
-  transition: transform 0.1s ease-out;
   transform-origin: center center;
 }
 

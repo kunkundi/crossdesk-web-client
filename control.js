@@ -21,6 +21,7 @@
 
   const TAP_MAX_DURATION = 300;
   const TAP_MOVE_TOLERANCE = 10;
+  const PINCH_SPAN_TOLERANCE = 6;
 
   const clamp01 = (value) => Math.max(0, Math.min(1, value));
   const isTextInput = (el) => {
@@ -830,6 +831,17 @@
     updateTouchGesture(touches) {
       const gesture = this.state.touchGesture;
       if (!gesture) return;
+      // A small symmetric pinch can leave both fingers inside the tap tolerance.
+      if (
+        this.state.pinchZoomActive && gesture.points.size === 2 && touches.length === 2 &&
+        gesture.points.has(touches[0].identifier) && gesture.points.has(touches[1].identifier)
+      ) {
+        const span = this.getTouchDistance(touches[0], touches[1]);
+        if (Math.abs(span - this.state.initialPinchDistance) >= PINCH_SPAN_TOLERANCE) {
+          gesture.moved = true;
+          gesture.cancelled = true;
+        }
+      }
       for (const touch of Array.from(touches)) {
         const start = gesture.points.get(touch.identifier);
         if (!start) {
@@ -903,13 +915,12 @@
       const gesture = this.state.touchGesture;
       if (!gesture) return;
       this.ensureVideoRect();
-      this.updateTouchGesture(event.changedTouches);
+      this.updateTouchGesture(Array.from(event.touches).concat(Array.from(event.changedTouches)));
       if (!Array.from(event.changedTouches).some((touch) =>
         gesture.points.has(touch.identifier),
       )) return;
 
       event.preventDefault();
-      this.updateTouchGesture(event.touches);
       if (event.type === "touchcancel") gesture.cancelled = true;
       this.onPinchEnd(event);
       if (Array.from(event.touches).some((touch) =>
@@ -1594,7 +1605,8 @@
         const currentCenter = this.getTouchCenter(touch1, touch2);
 
         // Calculate scale factor
-        const scaleFactor = currentDistance / this.state.initialPinchDistance;
+        const scaleFactor = Math.max(PINCH_SPAN_TOLERANCE, currentDistance) /
+          Math.max(PINCH_SPAN_TOLERANCE, this.state.initialPinchDistance);
         const newScale = this.state.initialScale * scaleFactor;
 
         // Limit scale between 1.0x (initial size) and 3x
