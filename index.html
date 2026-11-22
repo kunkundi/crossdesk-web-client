@@ -203,6 +203,14 @@
           <!-- Shared Android/iOS interaction: independent orb, dismissible menu. -->
           <div id="connected-overlay" class="connected-overlay" style="display: none">
             <button id="session-menu-shield" type="button" aria-label="关闭控制菜单" hidden></button>
+            <div id="virtual-mouse" role="group" aria-label="虚拟鼠标" style="display: none">
+              <button type="button" id="virtual-mouse-grip" aria-label="拖动虚拟鼠标" title="拖动或使用方向键移动虚拟鼠标"></button>
+              <div class="virtual-mouse-row">
+                <button type="button" id="virtual-left-btn" aria-label="鼠标左键"></button>
+                <button type="button" id="virtual-wheel" aria-label="鼠标滚轮" title="上下滑动或使用上下方向键滚动"></button>
+                <button type="button" id="virtual-right-btn" aria-label="鼠标右键"></button>
+              </div>
+            </div>
             <button id="panel-collapsed-bar" class="panel-collapsed-bar" type="button"
               aria-label="远程控制菜单" aria-expanded="false" aria-controls="connected-panel">
               <img src="icons/crossdesk-180-circle.png" alt="" class="collapsed-bar-icon" draggable="false" />
@@ -297,22 +305,6 @@
               <button id="disconnect-connected" class="session-disconnect session-danger" type="button">断开连接</button>
             </section>
           </div>
-          <!-- Virtual mouse bar follows the session orb. -->
-          <div id="virtual-mouse" style="display: none" aria-label="虚拟鼠标">
-            <div class="virtual-mouse-row">
-              <button id="virtual-left-btn" class="virtual-mouse-btn">
-                左键
-              </button>
-              <div class="virtual-scroll-buttons">
-                <button id="virtual-scroll-up" class="virtual-scroll-btn">↑</button>
-                <button id="virtual-scroll-down" class="virtual-scroll-btn">↓</button>
-              </div>
-              <button id="virtual-right-btn" class="virtual-mouse-btn">
-                右键
-              </button>
-        </div>
-      </div>
-
           <!-- Virtual keyboard -->
           <div id="virtual-keyboard" class="virtual-keyboard" style="display: none">
             <div id="keyboard-header" class="keyboard-header">

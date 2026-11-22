@@ -26,21 +26,23 @@ For self-hosting, both clients must use the same signaling service. Forking or d
 - Click inside the remote video to use your mouse and physical keyboard. Supported browsers request pointer lock; press **Esc** to release the pointer and return to page controls. Behavior depends on the browser's [Pointer Lock support](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_Lock_API).
 - Use left / middle / right mouse buttons and the scroll wheel. Keyboard input is sent as key events; some shortcuts reserved by the OS or browser may not reach the host.
 - Click the floating CrossDesk icon to open or close the menu; drag it to reposition it. Click outside the menu or its close button to close it. Esc returns from a subpage to the main menu, or closes the main menu.
+- In relative mouse mode, push the pointer toward an edge of the zoomed view to pan. At a corner, the view pans along both axes. At 1×, keep pushing past the top or bottom of the picture to pan vertically.
 
 ### Phone and tablet browsers
 
-**Tap the video with one finger to left-click or two fingers to right-click; slide to move the pointer.** You can also click with the virtual mouse buttons.
+**Tap the video with one finger to left-click or two fingers to right-click; slide to move the pointer.** The virtual mouse appears in the lower-right corner when the first remote frame arrives. Drag its top grip to move it independently. You can keep using it while the floating menu is open.
 
 | Action | How to use it |
 | --- | --- |
 | Absolute positioning | Click the mouse-mode button until it shows “绝对鼠标”; touch position maps to the remote pointer position |
 | Relative movement | The default is “相对鼠标”; slide on the video to move the pointer by relative displacement |
-| Left / right click | Tap the video with one finger for left-click or two fingers for right-click; virtual “左键” / “右键” buttons also work |
-| Drag | Press and slide from the virtual “左键” button; release to finish dragging |
-| Scroll | Use ↑ / ↓ on the virtual mouse; hold for continuous scrolling |
-| Type keys | Tap “键盘” in the menu or ⌨ on the virtual mouse; drag the keyboard header to move it, or tap × to close it |
+| Left / right click | Tap the video with one finger for left-click or two fingers for right-click; you can also tap the left or right side of the virtual mouse |
+| Drag | Press and slide from the left mouse button; release to finish dragging |
+| Scroll | Slide the center wheel up or down, continuing beyond the button if needed. Lift to stop. |
+| Type keys | Tap “键盘” in the menu; drag the keyboard header to move it, or tap × to close it |
 | Zoom / pan | Pinch the video to zoom between 1× and 3×, and move two fingers to pan; double-tap to reset zoom |
-| Minimize virtual mouse | Toggle “虚拟鼠标” in the floating menu |
+| Pan with the pointer | Edge panning also works when sliding in relative mode or dragging a virtual mouse button. Push toward the top of the virtual keyboard to reveal content behind it. Lifting retains the view. Zoom back to 1× or switch displays to recenter. |
+| Minimize virtual mouse | Tap “收起鼠标” in the floating menu to hide it. Tap “虚拟鼠标” to restore it at the same position. |
 
 The touch layout uses the browser's pointer and hover capabilities, not screen size alone. The virtual keyboard sends key codes and does not provide a local input-method text submission interface.
 

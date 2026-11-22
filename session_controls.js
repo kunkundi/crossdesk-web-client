@@ -5,6 +5,9 @@
   const byId = (id) => document.getElementById(id);
   const orb = byId("panel-collapsed-bar");
   const panel = byId("connected-panel");
+  const mouse = byId("virtual-mouse");
+  const grip = byId("virtual-mouse-grip");
+  const keyboard = byId("virtual-keyboard");
   const shield = byId("session-menu-shield");
   if (!orb || !panel || !shield || !control || !session) return;
   const clamp = (n, min, max) => Math.max(min, Math.min(n, Math.max(min, max)));
@@ -19,6 +22,7 @@
       this.page = "main";
       this.orbPosition = null;
       this.keyboardPosition = null;
+      this.mousePosition = null;
       this.mouseVisible = false;
       this.drag = null;
       this.suppressClick = false;
@@ -67,18 +71,6 @@
         this.place(panel, leftSide ? rect.left - panel.offsetWidth - 12 : rect.right + 12,
           rect.top + rect.height / 2 - panel.offsetHeight / 2, b);
       }
-      const mouse = byId("virtual-mouse");
-      if (mouse.style.display !== "none") {
-        let x = rect.left - mouse.offsetWidth - 6, y = rect.top + 3;
-        if (x < b.left) x = rect.right + 6;
-        if (x + mouse.offsetWidth > b.right) {
-          x = rect.left;
-          y = rect.bottom + 6 + mouse.offsetHeight <= b.bottom
-            ? rect.bottom + 6 : rect.top - mouse.offsetHeight - 6;
-        }
-        this.place(mouse, x, y, b);
-      }
-      const keyboard = byId("virtual-keyboard");
       keyboard.style.width = `${Math.min(800, width)}px`;
       keyboard.style.maxHeight = `${height}px`;
       keyboard.style.setProperty("--keyboard-height", `${height}px`);
@@ -87,12 +79,29 @@
           y: b.bottom - keyboard.offsetHeight };
         this.keyboardPosition = this.place(keyboard, kp.x, kp.y, b);
       }
+      if (mouse.style.display !== "none") {
+        const preferred = this.mousePosition || { x: b.right - mouse.offsetWidth - 8,
+          y: b.bottom - mouse.offsetHeight - 16 };
+        const x = clamp(preferred.x, b.left, b.right - mouse.offsetWidth);
+        let y = clamp(preferred.y, b.top, b.bottom - mouse.offsetHeight);
+        if (keyboard.style.display !== "none") {
+          const kb = keyboard.getBoundingClientRect();
+          if (x < kb.right && x + mouse.offsetWidth > kb.left &&
+              y < kb.bottom && y + mouse.offsetHeight > kb.top) {
+            const above = kb.top - mouse.offsetHeight - 6;
+            y = above >= b.top ? above : kb.bottom + 6;
+          }
+        }
+        this.place(mouse, x, y, b);
+      }
+      control.constrainViewport();
     }
 
     start() {
       this.active = true;
       this.videoReady = false;
-      this.mouseVisible = false;
+      this.mouseVisible = true;
+      this.mousePosition = null;
       this.orbPosition = null;
       this.keyboardPosition = null;
       control.setMouseMode("relative");
@@ -179,8 +188,9 @@
     }
 
     updateMouse() {
-      const visible = this.active && this.connected && this.videoReady && this.mouseVisible && panel.hidden;
-      byId("virtual-mouse").style.display = visible ? "flex" : "none";
+      const visible = this.active && this.connected && this.videoReady && this.mouseVisible;
+      if (!visible && this.drag?.target === mouse) this.endDrag(null, true);
+      mouse.style.display = visible ? "flex" : "none";
       byId("session-mouse-label").textContent = this.mouseVisible ? "收起鼠标" : "虚拟鼠标";
       byId("session-mouse").setAttribute("aria-pressed", String(this.mouseVisible));
       byId("session-mouse-mode-label").textContent = control.state.mobileControlMode === "relative" ? "相对鼠标" : "绝对鼠标";
@@ -376,6 +386,7 @@
       const point = touch || event, rect = target.getBoundingClientRect();
       if (touch) event.preventDefault();
       control.cancelLocalInput();
+      control.setDraggingPanel(true);
       this.drag = { target, touchId: touch?.identifier, x: point.clientX, y: point.clientY,
         left: rect.left, top: rect.top, moved: false };
       this.suppressClick = false;
@@ -390,10 +401,10 @@
       if (!drag.moved && Math.hypot(dx, dy) < 4) return;
       event.preventDefault();
       drag.moved = true;
-      control.setDraggingPanel(true);
       if (drag.target === orb) this.close();
       const position = this.place(drag.target, drag.left + dx, drag.top + dy);
       if (drag.target === orb) this.orbPosition = position;
+      else if (drag.target === mouse) this.mousePosition = position;
       else this.keyboardPosition = position;
       this.layout();
     }
@@ -401,10 +412,11 @@
     endDrag(event, cancelled = false) {
       const drag = this.drag;
       if (!drag) return;
+      if (event && !event.changedTouches && (drag.touchId !== undefined || event.button !== 0)) return;
       if (event?.changedTouches && !Array.from(event.changedTouches).some(t => t.identifier === drag.touchId)) return;
       this.drag = null;
       control.setDraggingPanel(false);
-      this.suppressClick = drag.moved || cancelled;
+      this.suppressClick = drag.target === orb && (drag.moved || cancelled);
       if (drag.touchId !== undefined && !drag.moved && !cancelled && drag.target === orb) {
         this.toggle();
         this.suppressClick = true;
@@ -421,16 +433,27 @@
         if (this.suppressClick) { this.suppressClick = false; return; }
         this.toggle();
       });
-      for (const target of [orb, byId("keyboard-header")]) {
-        const draggable = target === orb ? orb : byId("virtual-keyboard");
+      for (const [target, draggable] of [[orb, orb], [byId("keyboard-header"), keyboard], [grip, mouse]]) {
         target.addEventListener("mousedown", event => this.beginDrag(event, draggable));
         target.addEventListener("touchstart", event => this.beginDrag(event, draggable), { passive: false });
       }
+      grip.addEventListener("keydown", event => {
+        const steps = { ArrowLeft: [-8, 0], ArrowRight: [8, 0], ArrowUp: [0, -8], ArrowDown: [0, 8] };
+        const step = steps[event.key];
+        if (!step) return;
+        event.preventDefault();
+        const rect = mouse.getBoundingClientRect();
+        this.mousePosition = this.place(mouse, rect.left + step[0], rect.top + step[1]);
+        this.layout();
+      });
       document.addEventListener("mousemove", event => this.moveDrag(event));
       document.addEventListener("touchmove", event => this.moveDrag(event), { passive: false });
       document.addEventListener("mouseup", event => this.endDrag(event, event.crossdeskPointerCancelled));
       document.addEventListener("touchend", event => this.endDrag(event));
       document.addEventListener("touchcancel", event => this.endDrag(event, true));
+      document.addEventListener("pointercancel", event => {
+        if (event.pointerType !== "touch" && this.drag?.touchId === undefined) this.endDrag(null, true);
+      });
       window.addEventListener("blur", () => { this.endDrag(null, true); control.cancelLocalInput(); });
       document.addEventListener("visibilitychange", () => {
         if (document.hidden) { this.endDrag(null, true); control.cancelLocalInput(); }
@@ -488,7 +511,7 @@
         this.renderResolutions(window.CrossDeskDisplayResolutions);
       });
       byId("session-keyboard").addEventListener("click", () => {
-        this.close(); control.toggleVirtualKeyboard(); this.layout();
+        this.close(); control.toggleVirtualKeyboard();
       });
       byId("session-mouse").addEventListener("click", () => {
         control.cancelLocalInput(); this.mouseVisible = !this.mouseVisible; this.close();

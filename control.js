@@ -23,7 +23,15 @@
   const TAP_MOVE_TOLERANCE = 10;
   const PINCH_SPAN_TOLERANCE = 6;
 
-  const clamp01 = (value) => Math.max(0, Math.min(1, value));
+  const POINTER_INSET = 18;
+  const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+  const clamp01 = value => clamp(value, 0, 1);
+  const containsPoint = (rect, x, y) => rect &&
+    x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+  const edgePan = (point, low, high) => {
+    const inset = Math.min(POINTER_INSET, (high - low) / 2);
+    return clamp(point, low + inset, high - inset) - point;
+  };
   const isTextInput = (el) => {
     if (!el || !el.tagName) return false;
     const tag = el.tagName.toLowerCase();
@@ -71,6 +79,7 @@
         bubbles: !["mouseenter", "mouseleave"].includes(type),
         cancelable: true,
         clientX: pos.x, clientY: pos.y,
+        detail: type === "click" ? 1 : 0,
         button: event.button ?? 0, buttons: event.buttons ?? 0,
         ctrlKey: event.ctrlKey, shiftKey: event.shiftKey,
         altKey: event.altKey, metaKey: event.metaKey,
@@ -165,6 +174,8 @@
         const scale = event.deltaMode === 1 ? 16 :
           event.deltaMode === 2 ? this.menu.element.clientHeight : 1;
         this.menu.element.scrollTop += event.deltaY * scale;
+      } else if (target === this.control.elements.virtualWheel && event.deltaY) {
+        this.control.stepVirtualWheel(Math.sign(event.deltaY));
       } else {
         const scroll = target?.closest(".session-menu-body, .keyboard-layout");
         if (scroll) scroll.scrollTop += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? scroll.clientHeight : 1);
@@ -260,11 +271,9 @@
         video: document.getElementById("video"),
         mediaContainer: document.getElementById("media"),
         videoContainer: document.getElementById("video-container"),
-        virtualMouse: document.getElementById("virtual-mouse"),
         virtualLeftBtn: document.getElementById("virtual-left-btn"),
         virtualRightBtn: document.getElementById("virtual-right-btn"),
-        virtualScrollUp: document.getElementById("virtual-scroll-up"),
-        virtualScrollDown: document.getElementById("virtual-scroll-down"),
+        virtualWheel: document.getElementById("virtual-wheel"),
         virtualKeyboard: document.getElementById("virtual-keyboard"),
         keyboardClose: document.getElementById("keyboard-close"),
       };
@@ -274,7 +283,8 @@
       this.lockedCursor = null;
 
       this.virtualKeyTimers = new Map(); // Store timers for each key element
-      this.virtualScrollTimers = new Map(); // Store timers for scroll buttons
+      this.virtualPresses = new Map();
+      this.wheelPhase = 2;
 
       this.state = {
         pointerLocked: false,
@@ -286,9 +296,6 @@
         draggingPanel: false, // Track if status panel is being dragged
         pointerLockToastTimer: null,
         videoRect: null,
-        gestureActive: false,
-        gestureButton: null,
-        gestureStart: null,
         isMobile: false,
         mobileControlMode: "relative", // "absolute" or "relative"
         touchGesture: null,
@@ -299,6 +306,7 @@
         initialPinchDistance: 0,
         initialScale: 1.0,
         currentScale: 1.0,
+        edgePanned: false,
         lastDoubleTapTime: 0,
         // Pan state (for dragging zoomed image)
         initialPinchCenter: null,
@@ -321,10 +329,6 @@
       this.onTouchStart = this.onTouchStart.bind(this);
       this.onTouchMove = this.onTouchMove.bind(this);
       this.onTouchEnd = this.onTouchEnd.bind(this);
-      this.onVirtualLeftStart = this.onVirtualLeftStart.bind(this);
-      this.onVirtualRightStart = this.onVirtualRightStart.bind(this);
-      this.onVirtualButtonMove = this.onVirtualButtonMove.bind(this);
-      this.onVirtualButtonEnd = this.onVirtualButtonEnd.bind(this);
 
       this.init();
     }
@@ -339,6 +343,7 @@
       video.style.pointerEvents = "auto";
       video.tabIndex = 0;
 
+      video.addEventListener("resize", () => this.constrainViewport());
       this.bindPointerLockEvents();
       this.bindPointerListeners();
       this.bindKeyboardListeners();
@@ -349,6 +354,7 @@
     setDataChannel(channel) {
       if (channel !== this.dataChannel) {
         this.cancelLocalInput();
+        this.resetZoom();
         this.lockedPanel.reset();
         if (!channel && this.state.pointerLocked) {
           document.exitPointerLock?.();
@@ -484,6 +490,8 @@
         console.warn("sendDisplayId: Invalid display_id:", id);
         return;
       }
+      this.cancelLocalInput();
+      this.resetZoom();
       const action = {
         type: ControlType.display_id,
         display_id: numericId | 0,
@@ -628,9 +636,16 @@
         video.style.touchAction = "none";
       } catch (err) {}
 
-      video.addEventListener("pointerdown", this.onPointerDown, {
-        passive: false,
-      });
+      // A panned video can uncover the container. Both surfaces accept input,
+      // while overlay controls keep ownership of events that start on them.
+      const container = this.elements.videoContainer;
+      for (const [type, handler] of [["pointerdown", this.onPointerDown], ["wheel", this.onWheel],
+        ["touchstart", this.onTouchStart]]) {
+        video.addEventListener(type, handler, { passive: false });
+        container?.addEventListener(type, event => {
+          if (event.target === container) handler(event);
+        }, { passive: false });
+      }
       document.addEventListener("pointermove", this.onPointerMove, {
         passive: false,
       });
@@ -638,13 +653,6 @@
         passive: false,
       });
       document.addEventListener("pointercancel", this.onPointerCancel);
-      video.addEventListener("wheel", this.onWheel, { passive: false });
-
-      // Use one touch stream for taps, pointer movement, and pinch zoom.
-      // Pointer events from the same fingers are ignored to avoid duplicate clicks.
-      video.addEventListener("touchstart", this.onTouchStart, {
-        passive: false,
-      });
       document.addEventListener("touchmove", this.onTouchMove, {
         passive: false,
       });
@@ -656,6 +664,17 @@
       });
     }
 
+    hasRelativeDesktopPointer() {
+      return this.state.mobileControlMode === "relative" && this.state.desktopPointerCalibrated &&
+        (this.state.pointerLocked || this.state.pointerLockFailed || this.pressedMouseButtons.size > 0);
+    }
+
+    // Once the viewport follows the remote cursor, the Pointer Lock position is
+    // still needed for local controls, but no longer identifies the remote pixel.
+    mapDesktopPointer(x, y) {
+      if (!this.state.edgePanned || !this.hasRelativeDesktopPointer()) this.updateNormalizedFromClient(x, y);
+    }
+
     onPointerDown(event) {
       if (event.pointerType === "touch" || !this.isChannelOpen()) return;
 
@@ -664,12 +683,12 @@
       if (this.state.pointerLocked && this.lockedPanel.down(event)) return;
       const { x, y } = this.getPointerPosition(event);
       this.ensureVideoRect();
-      if (this.state.draggingPanel || this.isInsidePanel(x, y) ||
-          !this.isInsideVideo(x, y)) return;
+      if (this.state.draggingPanel || this.isInsidePanel(x, y)) return;
+      if (!this.isInsideVideo(x, y) && !(this.state.edgePanned && this.hasRelativeDesktopPointer())) return;
 
       event.preventDefault?.();
       this.elements.video.focus?.({ preventScroll: true });
-      this.updateNormalizedFromClient(x, y);
+      this.mapDesktopPointer(x, y);
       if (!this.state.pointerLocked) {
         this.state.lastPointerPos = { x, y };
         // Save the real click before Pointer Lock freezes client coordinates.
@@ -700,23 +719,35 @@
 
     onPointerMove(event) {
       if (event.pointerType === "touch") return;
+      const previous = this.state.pointerLocked ? this.state.lockedPointerPos : this.state.lastPointerPos;
       if (this.state.pointerLocked) {
         this.updateLockedPointer(event.movementX, event.movementY);
         if (this.lockedPanel.move(event)) return;
       }
-      if (this.isDraggingAnyElement() || this.state.pinchZoomActive) return;
+      if (this.isDraggingAnyElement() || this.virtualPresses.size || this.state.pinchZoomActive) return;
       if (!this.state.pointerLocked && !this.state.lastPointerPos &&
           !this.state.pointerLockFailed && this.state.mobileControlMode !== "absolute") return;
 
       const { x, y } = this.getPointerPosition(event);
       this.ensureVideoRect();
       if (!this.state.videoRect) return;
-      // An existing remote drag can reach the edge and must still be released
-      // outside the video. Hovering over letterboxing never controls the host.
-      if (!this.pressedMouseButtons.size &&
-          (this.isInsidePanel(x, y) || !this.isInsideVideo(x, y))) return;
+      const useClientDelta = previous && !this.state.pointerLocked;
+      const dx = useClientDelta ? x - previous.x : event.movementX;
+      const dy = useClientDelta ? y - previous.y : event.movementY;
+      const relative = this.hasRelativeDesktopPointer();
       if (!this.state.pointerLocked) this.state.lastPointerPos = { x, y };
-      this.updateNormalizedFromClient(x, y);
+      if (!this.pressedMouseButtons.size) {
+        if (this.isInsidePanel(x, y)) return;
+        const crossingEdge = relative && (this.state.edgePanned || this.isInsideVideo(x - dx, y - dy));
+        if (!this.isInsideVideo(x, y) && !crossingEdge) return;
+      }
+      if (relative && Number.isFinite(dx) && Number.isFinite(dy)) {
+        if (previous && !this.state.edgePanned) this.updateNormalizedFromClient(previous.x, previous.y);
+        this.moveRelativePointer(dx, dy);
+      } else {
+        if (this.isInsideVideo(x, y)) this.panAboveKeyboard(x, y);
+        this.updateNormalizedFromClient(x, y);
+      }
       this.sendMouseAction({
         ...this.state.normalizedPos,
         flag: MouseFlag.move,
@@ -728,10 +759,11 @@
       if (this.state.pointerLocked && this.lockedPanel.up(event)) return;
       const button = typeof event.button === "number" ? event.button : 0;
       // A press in the black border or local UI must not release/click remotely.
-      if (!this.pressedMouseButtons.delete(button)) return;
+      if (!this.pressedMouseButtons.has(button)) return;
       const { x, y } = this.getPointerPosition(event);
       this.ensureVideoRect();
-      this.updateNormalizedFromClient(x, y);
+      this.mapDesktopPointer(x, y);
+      this.pressedMouseButtons.delete(button);
       try {
         this.elements.video?.releasePointerCapture?.(event.pointerId ?? 0);
       } catch (err) {
@@ -747,6 +779,7 @@
     onPointerCancel(event) {
       if (event.pointerType === "touch") return;
       this.lockedPanel.reset();
+      this.trackVirtualPresses(event, true);
       this.releaseMouseButtons();
     }
 
@@ -757,8 +790,9 @@
       this.state.lastWheelAt = now;
       const { x, y } = this.getPointerPosition(event);
       this.ensureVideoRect();
-      if (this.isInsidePanel(x, y) || !this.isInsideVideo(x, y)) return;
-      this.updateNormalizedFromClient(x, y);
+      if (this.isInsidePanel(x, y)) return;
+      if (!this.isInsideVideo(x, y) && !(this.state.edgePanned && this.hasRelativeDesktopPointer())) return;
+      this.mapDesktopPointer(x, y);
 
       const isHorizontalWheel = event.deltaY === 0;
       const scrollDelta = isHorizontalWheel ? event.deltaX : -event.deltaY;
@@ -779,12 +813,9 @@
       if (!this.state.videoRect) return;
 
       const touches = Array.from(event.changedTouches);
-      if (
-        touches.some((touch) =>
-          this.isInsidePanel(touch.clientX, touch.clientY) ||
-          !this.isInsideVideo(touch.clientX, touch.clientY),
-        )
-      ) {
+      const surface = this.state.mobileControlMode === "relative" ? this.visibleViewport() : this.state.videoRect;
+      if (touches.some(touch => !containsPoint(surface, touch.clientX, touch.clientY) ||
+          this.isInsidePanel(touch.clientX, touch.clientY))) {
         if (this.state.touchGesture) this.state.touchGesture.cancelled = true;
         return;
       }
@@ -795,7 +826,7 @@
           startedAt: Date.now(),
           points: new Map(),
           moved: false,
-          cancelled: this.state.gestureActive,
+          cancelled: this.virtualPresses.size > 0 || !this.isInsideVideo(touches[0].clientX, touches[0].clientY),
         };
         const touch = touches[0];
         this.state.touchLastPos = { x: touch.clientX, y: touch.clientY };
@@ -862,7 +893,7 @@
           gesture.cancelled = true;
         }
       }
-      if (this.isDraggingAnyElement() || this.state.gestureActive) {
+      if (this.isDraggingAnyElement() || this.virtualPresses.size) {
         gesture.cancelled = true;
       }
     }
@@ -889,23 +920,16 @@
       const touch = Array.from(event.touches).find((touch) =>
         gesture.points.has(touch.identifier),
       );
-      if (
-        !touch || this.isDraggingAnyElement() ||
-        this.isInsidePanel(touch.clientX, touch.clientY)
-      ) return;
+      if (!touch || this.isDraggingAnyElement()) return;
 
       if (this.state.mobileControlMode === "absolute") {
-        if (!this.isInsideVideo(touch.clientX, touch.clientY)) return;
+        if (!this.isInsideVideo(touch.clientX, touch.clientY) || this.isInsidePanel(touch.clientX, touch.clientY)) return;
+        this.panAboveKeyboard(touch.clientX, touch.clientY);
         this.updateNormalizedFromClient(touch.clientX, touch.clientY);
       } else if (this.state.touchLastPos) {
         const deltaX = touch.clientX - this.state.touchLastPos.x;
         const deltaY = touch.clientY - this.state.touchLastPos.y;
-        this.state.normalizedPos.x = clamp01(
-          this.state.normalizedPos.x + deltaX / this.state.videoRect.width,
-        );
-        this.state.normalizedPos.y = clamp01(
-          this.state.normalizedPos.y + deltaY / this.state.videoRect.height,
-        );
+        this.moveRelativePointer(deltaX, deltaY);
       }
       this.state.touchLastPos = { x: touch.clientX, y: touch.clientY };
       this.sendMouseAction({ ...this.state.normalizedPos, flag: MouseFlag.move });
@@ -952,7 +976,6 @@
           now - this.state.lastDoubleTapTime < 300
         ) {
           this.resetZoom();
-          this.state.lastDoubleTapTime = 0;
         } else {
           this.state.lastDoubleTapTime = now;
         }
@@ -993,8 +1016,7 @@
       this.state.videoRect = this.getRenderedVideoContentRect(video);
     }
 
-    getRenderedVideoContentRect(video) {
-      const rect = video.getBoundingClientRect();
+    getRenderedVideoContentRect(video, rect = video.getBoundingClientRect()) {
       const videoWidth = video.videoWidth || 0;
       const videoHeight = video.videoHeight || 0;
       if (!videoWidth || !videoHeight || !rect.width || !rect.height) {
@@ -1030,14 +1052,7 @@
     }
 
     isInsideVideo(clientX, clientY) {
-      const rect = this.state.videoRect;
-      if (!rect) return false;
-      return (
-        clientX >= rect.left &&
-        clientX <= rect.right &&
-        clientY >= rect.top &&
-        clientY <= rect.bottom
-      );
+      return containsPoint(this.state.videoRect, clientX, clientY);
     }
 
     isInsidePanel(clientX, clientY) {
@@ -1115,54 +1130,47 @@
 
       this.state.isMobile = !isDesktop;
 
-      this.elements.virtualLeftBtn?.addEventListener(
-        "touchstart",
-        this.onVirtualLeftStart,
-        { passive: false },
-      );
-      this.elements.virtualRightBtn?.addEventListener(
-        "touchstart",
-        this.onVirtualRightStart,
-        { passive: false },
-      );
-      document.addEventListener("touchmove", this.onVirtualButtonMove, {
-        passive: false,
-      });
-      document.addEventListener("touchend", this.onVirtualButtonEnd, {
-        passive: false,
-      });
-      document.addEventListener("touchcancel", this.onVirtualButtonEnd, {
-        passive: false,
-      });
-
-      for (const [button, direction] of [[this.elements.virtualScrollUp, "up"],
-        [this.elements.virtualScrollDown, "down"]]) {
+      const { virtualLeftBtn, virtualRightBtn, virtualWheel } = this.elements;
+      for (const [button, key] of [[virtualLeftBtn, 0], [virtualRightBtn, 2], [virtualWheel, null]]) {
         if (!button) continue;
-        for (const type of ["mousedown", "touchstart", "mouseup", "mouseleave", "touchend", "touchcancel"]) {
-          button.addEventListener(type, event => {
-            event.preventDefault();
-            this.handleVirtualScrollPress(button, direction,
-              type === "mousedown" || type === "touchstart");
-          }, { passive: false });
-        }
-      }
-
-      // The session orb positions the mouse bar; its own header drags the keyboard.
-      const mouseTouch = event => ({ touches: [{ clientX: event.clientX, clientY: event.clientY }],
-        preventDefault: () => event.preventDefault() });
-      for (const [button, start] of [[this.elements.virtualLeftBtn, this.onVirtualLeftStart],
-        [this.elements.virtualRightBtn, this.onVirtualRightStart]]) {
-        button?.addEventListener("mousedown", event => {
-          if (event.button === 0) start(mouseTouch(event));
+        const start = event => {
+          if (!this.isChannelOpen() || this.isDraggingAnyElement() ||
+              this.virtualPresses.has(button) || (event.button != null && event.button !== 0)) return;
+          const point = event.targetTouches?.[0] || event.changedTouches?.[0] || event;
+          event.preventDefault();
+          this.virtualPresses.set(button, { key, id: point.identifier, x: point.clientX,
+            y: point.clientY, remainder: 0 });
+          button.classList?.add("is-pressed");
+          if (this.state.touchGesture) this.state.touchGesture.cancelled = true;
+          if (key !== null) this.sendMouseAction({ ...this.state.normalizedPos, flag: this.buttonToFlag(key, true) });
+        };
+        button.addEventListener("touchstart", start, { passive: false });
+        button.addEventListener("mousedown", start);
+        // Keyboard and assistive activations have no preceding mouse down/up.
+        button.addEventListener("click", event => {
+          if (event.detail !== 0 || !this.isChannelOpen() || this.virtualPresses.has(button)) return;
+          if (key === null) this.stepVirtualWheel(1);
+          else {
+            this.sendMouseAction({ ...this.state.normalizedPos, flag: this.buttonToFlag(key, true) });
+            this.sendMouseAction({ ...this.state.normalizedPos, flag: this.buttonToFlag(key, false) });
+          }
         });
       }
-      document.addEventListener("mousemove", event => {
-        if (this.state.gestureActive) this.onVirtualButtonMove(mouseTouch(event));
+      virtualWheel?.addEventListener("keydown", event => {
+        if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+        event.preventDefault();
+        this.stepVirtualWheel(event.key === "ArrowUp" ? -1 : 1);
       });
-      document.addEventListener("mouseup", event => {
-        if (event.button === 0) this.onVirtualButtonEnd(event);
-      });
-
+      virtualWheel?.addEventListener("wheel", event => {
+        event.preventDefault();
+        if (event.deltaY) this.stepVirtualWheel(Math.sign(event.deltaY));
+      }, { passive: false });
+      for (const type of ["touchmove", "mousemove", "touchend", "touchcancel", "mouseup"]) {
+        const ending = type !== "touchmove" && type !== "mousemove";
+        document.addEventListener(type, event => {
+          if (type !== "mouseup" || event.button === 0) this.trackVirtualPresses(event, ending);
+        }, { passive: false });
+      }
     }
 
     setupVirtualKeyboard() {
@@ -1220,12 +1228,14 @@
     showVirtualKeyboard() {
       if (!this.elements.virtualKeyboard) return;
       this.elements.virtualKeyboard.style.display = "block";
+      window.CrossDeskSessionControls?.layout();
     }
 
     hideVirtualKeyboard() {
       this.releaseVirtualKeys();
-      if (!this.elements.virtualKeyboard) return;
+      if (!this.elements.virtualKeyboard || this.elements.virtualKeyboard.style.display === "none") return;
       this.elements.virtualKeyboard.style.display = "none";
+      window.CrossDeskSessionControls?.layout();
     }
 
     handleVirtualKeyPress(keyElement, isDown) {
@@ -1296,13 +1306,14 @@
 
     cancelLocalInput() {
       window.CrossDeskClipboard?.cancelPaste();
-      this.onVirtualButtonEnd({});
+      for (const [button, press] of this.virtualPresses) this.releaseVirtualPress(button, press);
       this.releaseMouseButtons();
       this.releaseKeyboardKeys();
       this.releaseVirtualKeys();
-      for (const button of [...this.virtualScrollTimers.keys()]) this.handleVirtualScrollPress(button, "up", false);
       this.clearPendingMotion();
-      if (this.state.touchGesture) this.state.touchGesture.cancelled = true;
+      this.state.touchGesture = null;
+      this.state.touchLastPos = null;
+      this.state.pinchZoomActive = false;
     }
 
     stopRepeat(timers, element) {
@@ -1313,164 +1324,57 @@
       timers.delete(element);
     }
 
-    emitVirtualWheel(direction = "up") {
-      // direction: "up" or "down"
-      // The remote mouse protocol uses positive values for scrolling up.
-      const scrollValue = direction === "up" ? 1 : -1;
-      this.sendMouseAction({
-        x: this.state.normalizedPos.x,
-        y: this.state.normalizedPos.y,
-        flag: MouseFlag.wheel_vertical,
-        scroll: scrollValue,
-      });
+    advanceWheel(distance) {
+      this.wheelPhase = (this.wheelPhase + distance * 0.65) % 5;
+      this.elements.virtualWheel.style.setProperty("--wheel-offset", this.wheelPhase + "px");
     }
 
-    handleVirtualScrollPress(buttonElement, direction, isDown) {
-      if (isDown && !this.isChannelOpen()) return;
-
-      if (isDown) {
-        // Clear any existing timer for this button
-        this.stopRepeat(this.virtualScrollTimers, buttonElement);
-
-        // Send initial scroll
-        this.emitVirtualWheel(direction);
-
-        // Visual feedback - pressed state
-        buttonElement.style.backgroundColor = "rgba(180, 180, 180, 0.95)";
-        buttonElement.style.transform = "scale(0.92)";
-        buttonElement.style.boxShadow = "0 1px 2px rgba(0, 0, 0, 0.3)";
-
-        // Store timer info for this button
-        const timerInfo = {
-          longPressTimer: null,
-          repeatTimer: null,
-        };
-
-        // Set up long press detection
-        timerInfo.longPressTimer = setTimeout(() => {
-          // After 300ms, start repeating
-          timerInfo.repeatTimer = setInterval(() => {
-            if (this.isChannelOpen()) {
-              this.emitVirtualWheel(direction);
-            }
-          }, 100); // Repeat every 100ms
-        }, 300); // Long press threshold: 300ms
-
-        this.virtualScrollTimers.set(buttonElement, timerInfo);
-      } else {
-        // Stop repeating
-        this.stopRepeat(this.virtualScrollTimers, buttonElement);
-
-        // Visual feedback - released state - clear inline styles to restore CSS
-        setTimeout(() => {
-          // Remove focus to prevent browser default focus styles
-          if (document.activeElement === buttonElement) {
-            buttonElement.blur();
-          }
-          // Force clear all inline styles
-          buttonElement.style.backgroundColor = "";
-          buttonElement.style.transform = "";
-          buttonElement.style.boxShadow = "";
-          buttonElement.style.outline = "";
-        }, 0);
+    sendWheelSteps(steps) {
+      // One remote wheel unit for every 10 CSS pixels. Down is negative on the host.
+      for (let i = 0; i < Math.min(Math.abs(steps), 32); i++) {
+        this.sendMouseAction({ ...this.state.normalizedPos, flag: MouseFlag.wheel_vertical, scroll: -Math.sign(steps) });
       }
     }
 
-    onVirtualLeftStart(event) {
-      this.onVirtualButtonStart(event, this.elements.virtualLeftBtn, MouseFlag.left_down, MouseFlag.left_up);
+    stepVirtualWheel(direction) {
+      this.advanceWheel(direction * 10);
+      this.sendWheelSteps(direction);
     }
 
-    onVirtualRightStart(event) {
-      this.onVirtualButtonStart(event, this.elements.virtualRightBtn, MouseFlag.right_down, MouseFlag.right_up);
-    }
-
-    onVirtualButtonStart(event, button, down, up) {
-      const touch = event.changedTouches?.[0] || event.touches?.[0];
-      if (!touch || !this.isChannelOpen() || this.state.gestureActive) return;
-      event.preventDefault();
-      this.ensureVideoRect();
-      this.state.gestureActive = true;
-      this.state.gestureButton = { down, up };
-      this.state.gestureStart = {
-        touchId: touch.identifier,
-        x: touch.clientX,
-        y: touch.clientY,
-        normalizedX: this.state.normalizedPos.x,
-        normalizedY: this.state.normalizedPos.y,
-      };
-      if (button) {
-        button.style.backgroundColor = "var(--primary-color)";
-        button.style.color = "#fff";
-      }
-      this.sendMouseAction({
-        x: this.state.normalizedPos.x,
-        y: this.state.normalizedPos.y,
-        flag: down,
-      });
-    }
-
-    onVirtualButtonMove(event) {
-      if (!this.state.gestureActive || !this.state.gestureStart) return;
-      const touchId = this.state.gestureStart.touchId;
-      const touch = touchId === undefined ? event.touches?.[0] :
-        Array.from(event.touches || []).find(t => t.identifier === touchId);
-      if (!touch) return;
-      event.preventDefault();
-      this.ensureVideoRect();
-      if (!this.state.videoRect) return;
-
-      const sensitivity = 2;
-      const deltaX = touch.clientX - this.state.gestureStart.x;
-      const deltaY = touch.clientY - this.state.gestureStart.y;
-      const newX =
-        this.state.gestureStart.normalizedX +
-        (deltaX / this.state.videoRect.width) * sensitivity;
-      const newY =
-        this.state.gestureStart.normalizedY +
-        (deltaY / this.state.videoRect.height) * sensitivity;
-
-      this.state.normalizedPos = { x: clamp01(newX), y: clamp01(newY) };
-      this.sendMouseAction({
-        x: this.state.normalizedPos.x,
-        y: this.state.normalizedPos.y,
-        flag: MouseFlag.move,
-      });
-    }
-
-    onVirtualButtonEnd(event) {
-      if (!this.state.gestureActive) return;
-      const touchId = this.state.gestureStart?.touchId;
-      if (touchId !== undefined && event.changedTouches &&
-          !Array.from(event.changedTouches).some(t => t.identifier === touchId)) return;
-      event.preventDefault?.();
-      const upFlag = this.state.gestureButton?.up ?? MouseFlag.left_up;
-      this.sendMouseAction({
-        x: this.state.normalizedPos.x,
-        y: this.state.normalizedPos.y,
-        flag: upFlag,
-      });
-
-      // 释放时恢复为原始颜色 - 清除内联样式让CSS生效
-      if (upFlag === MouseFlag.left_up && this.elements.virtualLeftBtn) {
-        this.elements.virtualLeftBtn.style.backgroundColor = "";
-        this.elements.virtualLeftBtn.style.color = "";
-        if (document.activeElement === this.elements.virtualLeftBtn) {
-          this.elements.virtualLeftBtn.blur();
+    trackVirtualPresses(event, ending) {
+      for (const [button, press] of this.virtualPresses) {
+        const point = event.changedTouches
+          ? Array.from(event.changedTouches).find(touch => touch.identifier === press.id)
+          : press.id === undefined ? event : null;
+        if (!point) continue;
+        event.preventDefault();
+        if (ending) {
+          this.releaseVirtualPress(button, press);
+          continue;
         }
-      } else if (
-        upFlag === MouseFlag.right_up &&
-        this.elements.virtualRightBtn
-      ) {
-        this.elements.virtualRightBtn.style.backgroundColor = "";
-        this.elements.virtualRightBtn.style.color = "";
-        if (document.activeElement === this.elements.virtualRightBtn) {
-          this.elements.virtualRightBtn.blur();
+        const dx = point.clientX - press.x, dy = point.clientY - press.y;
+        press.x = point.clientX;
+        press.y = point.clientY;
+        if (press.key === null) {
+          this.advanceWheel(dy);
+          press.remainder += dy;
+          const steps = Math.trunc(press.remainder / 10);
+          press.remainder -= steps * 10;
+          this.sendWheelSteps(steps);
+        } else if (dx || dy) {
+          this.ensureVideoRect();
+          this.moveRelativePointer(dx * 2, dy * 2);
+          this.sendMouseAction({ ...this.state.normalizedPos, flag: MouseFlag.move });
         }
       }
+    }
 
-      this.state.gestureActive = false;
-      this.state.gestureButton = null;
-      this.state.gestureStart = null;
+    releaseVirtualPress(button, press) {
+      if (press.key !== null) {
+        this.sendMouseAction({ ...this.state.normalizedPos, flag: this.buttonToFlag(press.key, false) });
+      }
+      this.virtualPresses.delete(button);
+      button.classList?.remove("is-pressed");
     }
 
     showPointerLockToast(text, duration = 2500) {
@@ -1555,14 +1459,6 @@
 
     // Pinch zoom handlers
     onPinchStart(event) {
-      // Only handle on video element
-      if (
-        event.target !== this.elements.video &&
-        !this.elements.video?.contains(event.target)
-      ) {
-        return;
-      }
-
       if (event.touches.length === 2) {
         event.preventDefault();
         event.stopPropagation();
@@ -1611,54 +1507,13 @@
 
         // Limit scale between 1.0x (initial size) and 3x
         const clampedScale = Math.max(1.0, Math.min(3.0, newScale));
-        this.state.currentScale = clampedScale;
-
-        // Calculate pan (translation) based on center point movement
-        if (this.state.initialPinchCenter) {
-          const deltaX = currentCenter.x - this.state.initialPinchCenter.x;
-          const deltaY = currentCenter.y - this.state.initialPinchCenter.y;
-
-          // Calculate new translate values based on initial translate + delta
-          let newTranslateX = this.state.initialTranslateX + deltaX;
-          let newTranslateY = this.state.initialTranslateY + deltaY;
-
-          // Constrain translation to keep image within bounds
-          if (this.elements.video && this.elements.videoContainer) {
-            this.ensureVideoRect();
-            if (this.state.videoRect) {
-              const videoWidth = this.state.videoRect.width;
-              const videoHeight = this.state.videoRect.height;
-
-              // Calculate maximum allowed translation
-              // When scaled, the image is larger, so we can move it more
-              const scaledWidth = videoWidth * clampedScale;
-              const scaledHeight = videoHeight * clampedScale;
-              const maxTranslateX = Math.max(0, (scaledWidth - videoWidth) / 2);
-              const maxTranslateY = Math.max(
-                0,
-                (scaledHeight - videoHeight) / 2,
-              );
-
-              // Clamp translation values
-              newTranslateX = Math.max(
-                -maxTranslateX,
-                Math.min(maxTranslateX, newTranslateX),
-              );
-              newTranslateY = Math.max(
-                -maxTranslateY,
-                Math.min(maxTranslateY, newTranslateY),
-              );
-            }
-          }
-
-          this.state.currentTranslateX = newTranslateX;
-          this.state.currentTranslateY = newTranslateY;
-        }
-
-        // Apply combined transform (scale + translate) to video element
-        if (this.elements.video) {
-          this.elements.video.style.transform = `scale(${clampedScale}) translate(${this.state.currentTranslateX}px, ${this.state.currentTranslateY}px)`;
-          this.elements.video.style.transformOrigin = "center center";
+        if (clampedScale === 1) {
+          this.state.edgePanned = false;
+          this.setViewport(1, 0, 0);
+        } else {
+          this.setViewport(clampedScale,
+            this.state.initialTranslateX + currentCenter.x - this.state.initialPinchCenter.x,
+            this.state.initialTranslateY + currentCenter.y - this.state.initialPinchCenter.y);
         }
       } else if (this.state.pinchZoomActive && event.touches.length < 2) {
         // Pinch ended
@@ -1677,17 +1532,109 @@
       }
     }
 
-    resetZoom() {
-      this.state.currentScale = 1.0;
-      this.state.initialScale = 1.0;
-      this.state.currentTranslateX = 0;
-      this.state.currentTranslateY = 0;
-      this.state.initialTranslateX = 0;
-      this.state.initialTranslateY = 0;
-      if (this.elements.video) {
-        this.elements.video.style.transform = "scale(1) translate(0, 0)";
-        this.elements.video.style.transformOrigin = "center center";
+    // Both cursor movement and viewport translation use screen-space CSS pixels.
+    // Only the normalized cursor position goes over the remote input channel.
+    moveRelativePointer(dx, dy) {
+      const rect = this.state.videoRect;
+      if ((!dx && !dy) || !rect?.width || !rect.height) return;
+      const point = this.state.normalizedPos;
+      const oldY = rect.top + point.y * rect.height;
+      point.x = clamp01(point.x + dx / rect.width);
+      point.y = clamp01(point.y + dy / rect.height);
+      const view = this.visibleViewport();
+      const zoomed = this.state.currentScale > 1;
+      const cursorX = rect.left + point.x * rect.width;
+      const panX = zoomed ? edgePan(cursorX, view.left, view.right) : 0;
+      // Push past the vertical edge of the visible image even at fit scale.
+      const top = Math.max(rect.top, view.top), bottom = Math.min(rect.bottom, view.bottom);
+      let panY = 0;
+      if (top < bottom) {
+        if (dy > 0) panY = -clamp(oldY + dy - bottom, 0, dy);
+        if (dy < 0) panY = clamp(top - oldY - dy, 0, -dy);
       }
+      const usableBottom = this.viewportBottom(view, cursorX + panX);
+      if (usableBottom > view.top && (zoomed || usableBottom < view.bottom)) {
+        panY += edgePan(rect.top + point.y * rect.height + panY, view.top, usableBottom);
+      }
+      this.panForPointer(panX, panY);
+    }
+
+    visibleViewport(container = this.elements.videoContainer.getBoundingClientRect()) {
+      const viewport = window.visualViewport;
+      if (!viewport) return container;
+      return {
+        left: Math.max(container.left, viewport.offsetLeft),
+        top: Math.max(container.top, viewport.offsetTop),
+        right: Math.min(container.right, viewport.offsetLeft + viewport.width),
+        bottom: Math.min(container.bottom, viewport.offsetTop + viewport.height),
+      };
+    }
+
+    viewportBottom(view, x) {
+      const keyboard = this.elements.virtualKeyboard?.getBoundingClientRect();
+      if (!keyboard?.height || keyboard.bottom <= view.top ||
+          (x !== undefined && (x < keyboard.left || x > keyboard.right))) return view.bottom;
+      return clamp(keyboard.top, view.top, view.bottom);
+    }
+
+    panAboveKeyboard(x, y) {
+      const view = this.visibleViewport();
+      const bottom = this.viewportBottom(view, x);
+      if (bottom >= view.bottom || y < view.top || y >= bottom) return;
+      const rect = this.state.videoRect;
+      const dy = clamp(edgePan(y, view.top, bottom),
+        Math.min(0, bottom - rect.bottom), Math.max(0, view.top - rect.top));
+      this.panForPointer(0, dy);
+    }
+
+    panForPointer(dx, dy) {
+      if (!dx && !dy) return;
+      this.state.edgePanned = true;
+      this.setViewport(this.state.currentScale,
+        this.state.currentTranslateX + dx, this.state.currentTranslateY + dy);
+    }
+
+    constrainViewport() {
+      if (this.state.edgePanned || this.state.currentScale > 1) {
+        this.setViewport(this.state.currentScale, this.state.currentTranslateX, this.state.currentTranslateY);
+      }
+    }
+
+    setViewport(scale, x, y) {
+      const { video, videoContainer } = this.elements;
+      const container = videoContainer.getBoundingClientRect();
+      if (!container.width || !container.height) return;
+      const base = this.getRenderedVideoContentRect(video, container);
+      let maxX = base.width * (scale - 1) / 2;
+      let maxY = base.height * (scale - 1) / 2, minY = -maxY;
+      if (this.state.edgePanned) {
+        if (scale > 1) maxX += POINTER_INSET;
+        const view = this.visibleViewport(container);
+        const bottom = this.viewportBottom(view);
+        const height = base.height * scale;
+        const visible = Math.min(height, (bottom - view.top) * 0.2);
+        const centerY = base.top + base.height / 2;
+        minY = view.top + visible - centerY - height / 2;
+        maxY = bottom - visible - centerY + height / 2;
+      }
+      x = clamp(x, -maxX, maxX);
+      y = clamp(y, minY, maxY);
+      if (scale === this.state.currentScale && x === this.state.currentTranslateX &&
+          y === this.state.currentTranslateY) return;
+      this.state.currentScale = scale;
+      this.state.currentTranslateX = x;
+      this.state.currentTranslateY = y;
+      video.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+      this.ensureVideoRect();
+    }
+
+    resetZoom() {
+      this.state.lastDoubleTapTime = 0;
+      this.state.edgePanned = false;
+      this.state.currentScale = this.state.initialScale = 1;
+      this.state.currentTranslateX = this.state.currentTranslateY = 0;
+      this.state.initialTranslateX = this.state.initialTranslateY = 0;
+      if (this.elements.video) this.elements.video.style.transform = "";
     }
   }
 
