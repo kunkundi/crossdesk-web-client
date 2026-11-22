@@ -59,6 +59,7 @@ file_transfer.js
 clipboard.js
 display_resolutions.js
 session_controls.js
+sponsors.js
 vendor/adapter-9.0.1.min.js
 icons/
 favicon.ico

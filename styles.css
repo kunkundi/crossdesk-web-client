@@ -81,8 +81,8 @@ body {
   isolation: isolate;
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(310px, 1fr);
-  grid-template-areas: "intro panel" "resources panel";
-  align-items: center;
+  grid-template-areas: "intro panel" "resources panel" "sponsors panel";
+  align-items: end;
   gap: 30px clamp(32px, 7vw, 120px);
   width: 100%;
   max-width: 1180px;
@@ -193,6 +193,70 @@ body {
 .connection-overlay a:focus-visible {
   outline: 2px solid var(--primary-color);
   outline-offset: 4px;
+}
+
+.connection-sponsors {
+  grid-area: sponsors;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  max-width: 480px;
+  padding: 4px 8px;
+  border-block: 1px solid var(--line);
+  background: rgb(255 255 255 / 88%);
+}
+
+.connection-sponsors h2 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sponsor-viewport {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border-left: 1px solid var(--line);
+  scrollbar-width: thin;
+}
+
+.sponsor-brands {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+}
+
+.sponsor-brands a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding-inline: 8px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sponsor-brands img {
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+
+.sponsor-brands [aria-hidden] {
+  color: var(--primary-color);
+}
+
+.sponsor-brands a:is(:hover, :focus-visible) > span {
+  text-decoration: underline;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 4px;
+}
+
+.sponsor-brands a:focus-visible {
+  outline-offset: -2px;
 }
 
 .connection-panel {
@@ -892,7 +956,7 @@ select:focus {
   .connection-layout {
     max-width: 480px;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "intro" "panel" "resources";
+    grid-template-areas: "intro" "panel" "resources" "sponsors";
     gap: 24px;
     padding-block: 8px 24px;
   }
@@ -905,6 +969,15 @@ select:focus {
   .connection-intro p {
     font-size: 14px;
     line-height: 1.7;
+  }
+
+  .connection-sponsors {
+    gap: 6px;
+  }
+
+  .sponsor-brands img {
+    width: 40px;
+    height: 40px;
   }
 }
 
